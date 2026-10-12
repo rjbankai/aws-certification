@@ -1,0 +1,78 @@
+# Épisode 9 — Questions d'examen en anglais : SDLC Automation
+L: Épisode neuf, le premier épisode de questions d'examen en anglais. Le domaine : SDLC Automation.
+R: Le format : une voix anglaise lit le scénario puis les quatre options, comme à l'examen. Ensuite, une dizaine de secondes de silence pour choisir. Si tu as besoin de plus de temps, mets sur pause. Puis on corrige en français, en expliquant pourquoi chaque mauvaise option est fausse.
+L: Conseil d'écoute : concentre-toi sur la dernière phrase de la question. C'est elle qui contient la contrainte. Huit questions. C'est parti.
+R: Question une.
+E: Question 1. A company stores its application code in an AWS CodeCommit repository. A DevOps engineer must prevent developers from pushing commits directly to the main branch, while still allowing them to push to feature branches. Which solution will meet this requirement?
+E: A. Enable branch protection on the main branch in the CodeCommit repository settings.
+E: B. Attach an IAM policy to the developers' group that denies the GitPush action with a condition on the codecommit References key for refs heads main.
+E: C. Create an approval rule template that requires two approvals for the main branch.
+E: D. Configure an EventBridge rule that reverts any commit pushed to the main branch.
+[pause 12]
+L: Réponse ?
+R: B. CodeCommit n'a pas de fonctionnalité native de protection de branche, donc A n'existe pas. C, les approval rules, s'appliquent aux pull requests, elles n'empêchent pas un push direct. D réagit après coup au lieu d'empêcher, et c'est du code maison. La bonne réponse est une politique IAM avec un Deny et la condition codecommit References.
+R: Question deux.
+E: Question 2. A company uses AWS CodeDeploy to deploy a new version of an Amazon ECS service with a blue green deployment. The team wants to run automated integration tests against the new task set before any production traffic is shifted to it. If the tests fail, the deployment must roll back. Which lifecycle hook should the team use to run the tests?
+E: A. BeforeInstall
+E: B. AfterInstall
+E: C. AfterAllowTestTraffic
+E: D. AfterAllowTraffic
+[pause 12]
+L: Réponse ?
+R: C, After Allow Test Traffic. À ce moment, le listener de test pointe vers la nouvelle version, mais le trafic de production n'a pas encore bougé. After Install est trop tôt, rien ne reçoit encore de trafic. After Allow Traffic est trop tard, la production est déjà sur la nouvelle version. Before Install se passe avant même la création du nouveau task set.
+R: Question trois.
+E: Question 3. A company has a CI CD pipeline in AWS CodePipeline in a tools account. The pipeline must deploy artifacts to a production account. The deployment stage fails with an access denied error when the production account tries to read the artifacts from the artifact bucket, which is encrypted with the default AWS managed key for Amazon S3. Which combination of actions will resolve the issue? Choose TWO.
+E: A. Create a customer managed AWS KMS key, use it for the artifact store, and grant the production account access in the key policy.
+E: B. Enable S3 Cross-Region Replication from the artifact bucket to a bucket in the production account.
+E: C. Add a bucket policy to the artifact bucket that allows the cross-account role from the production account to access the artifacts.
+E: D. Make the artifact bucket public and restrict access with an IP condition.
+[pause 15]
+L: Réponse ?
+R: A et C. La clé AWS managed pour S3 ne peut pas être partagée avec un autre compte, il faut une customer managed key. Et il faut une bucket policy qui autorise le rôle du compte de production. C'est notre trio : CMK, bucket policy, rôle. B répond à un problème de région, pas de compte. D est une faille de sécurité, toujours faux.
+R: Question quatre.
+E: Question 4. A company runs a production web application on AWS Elastic Beanstalk. The company wants to deploy new versions with no reduction in capacity during the deployment, and wants to minimize additional cost. Which deployment policy should the company use?
+E: A. All at once
+E: B. Rolling
+E: C. Rolling with additional batch
+E: D. Immutable
+[pause 12]
+L: Réponse ?
+R: C. Rolling with additional batch lance d'abord un lot supplémentaire, donc la capacité ne baisse jamais, et le surcoût se limite à ce lot. All at once coupe le service. Rolling réduit la capacité. Immutable maintient la capacité aussi, mais il double la flotte pendant le déploiement, donc il coûte plus cher. Les mots qui tranchent : minimize additional cost.
+R: Question cinq.
+E: Question 5. A DevOps engineer deploys a new application revision to Amazon EC2 instances with AWS CodeDeploy. The deployment fails on every instance during the ApplicationStop lifecycle event. The engineer discovers that the stop script from the previously deployed revision contains an error. What is the MOST efficient way to complete the deployment?
+E: A. Redeploy with the ignore application stop failures option enabled.
+E: B. Fix the ApplicationStop script in the new revision and redeploy.
+E: C. Terminate all instances and let the Auto Scaling group launch new ones.
+E: D. Remove the ApplicationStop hook from the new revision's appspec file.
+[pause 12]
+L: Réponse ?
+R: A. Application Stop exécute le script de la révision déjà installée, pas celui de la nouvelle. C'est le piège de B et de D : modifier la nouvelle révision ne change rien, puisque c'est l'ancien script qui plante. C fonctionne peut-être, mais c'est lourd et ce n'est pas le plus efficace.
+R: Question six.
+E: Question 6. A company deploys AWS Lambda functions by using AWS SAM. The company wants to shift ten percent of traffic to a new version for ten minutes, then shift the remaining traffic, and automatically roll back if an Amazon CloudWatch alarm on errors enters the ALARM state. Which solution meets these requirements with the LEAST operational overhead?
+E: A. Create two Lambda aliases and use Amazon Route 53 weighted records to split traffic.
+E: B. Use the AutoPublishAlias and DeploymentPreference properties with the type Canary10Percent10Minutes and reference the CloudWatch alarm.
+E: C. Write a Step Functions workflow that updates alias weights and checks the alarm every minute.
+E: D. Use the type Linear10PercentEvery10Minutes and configure a CloudWatch alarm action to invoke a rollback Lambda function.
+[pause 12]
+L: Réponse ?
+R: B. Dix pour cent puis le reste, c'est deux paliers, donc canary. SAM avec Deployment Preference crée le déploiement CodeDeploy, et la propriété Alarms gère le rollback automatique. D se trompe de type : linear, ce sont des paliers égaux répétés, et le rollback est fait à la main. A ne marche pas, Route 53 ne route pas vers un alias Lambda. C, c'est du code maison.
+R: Question sept.
+E: Question 7. A company uses AWS CodeBuild to build a Java application. The build must connect to an Amazon RDS database in a private subnet to run integration tests. After the team configures the CodeBuild project to run in the VPC, the build can no longer download dependencies from the internet or upload logs. What should the DevOps engineer do?
+E: A. Assign a public IP address to the CodeBuild project.
+E: B. Configure the CodeBuild project to use private subnets that route outbound traffic through a NAT gateway.
+E: C. Move the RDS database to a public subnet.
+E: D. Configure the CodeBuild project to use public subnets with an internet gateway.
+[pause 12]
+L: Réponse ?
+R: B. Un projet CodeBuild dans un VPC n'a pas d'IP publique, même dans un subnet public. D est donc le piège, et A n'est pas possible. Il faut des subnets privés avec une NAT gateway, ou des VPC endpoints pour les services AWS. C dégrade la sécurité, c'est faux.
+R: Question huit.
+E: Question 8. A company's development teams use many open source npm and Python packages. The security team wants to centrally control which external package versions can be used, cache them inside AWS, and give builds a single source for dependencies. Which solution meets these requirements with the LEAST operational overhead?
+E: A. Run a Nexus repository manager on Amazon EC2 instances in an Auto Scaling group.
+E: B. Mirror the packages to an Amazon S3 bucket with a scheduled Lambda function.
+E: C. Create an AWS CodeArtifact domain and repositories with upstream connections to the public npm and PyPI repositories.
+E: D. Store the packages in Amazon ECR as OCI artifacts.
+[pause 12]
+L: Réponse ?
+R: C. CodeArtifact est fait pour ça : un dépôt managé avec des connexions upstream vers npmjs et PyPI, et un cache. A fonctionne mais demande de gérer des serveurs, donc pas le moins d'overhead. B est du code maison avec un cron. D, ECR n'est pas un gestionnaire de packages npm ou pip.
+L: Fin de l'épisode. Compte tes bonnes réponses. En dessous de six sur huit, réécoute l'épisode un sur SDLC.
+R: Prochain épisode : les questions sur Configuration Management et Infrastructure as Code.

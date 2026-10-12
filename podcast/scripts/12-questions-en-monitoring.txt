@@ -1,0 +1,77 @@
+# Épisode 12 — Questions d'examen en anglais : Monitoring et Logging
+L: Épisode douze. Questions d'examen en anglais sur Monitoring et Logging.
+R: Ici, demande-toi toujours : quelle est la source de vérité, et comment on la transforme en alerte ou en action. Huit questions.
+R: Question une.
+E: Question 1. A company wants to receive an alert when the memory utilization of its Amazon EC2 instances exceeds eighty percent. The instances run Amazon Linux. Which solution meets this requirement?
+E: A. Create a CloudWatch alarm on the MemoryUtilization metric in the AWS EC2 namespace.
+E: B. Enable detailed monitoring on the instances and create an alarm on memory utilization.
+E: C. Use AWS Systems Manager to install the CloudWatch agent configured to collect memory metrics, and create an alarm on the custom metric.
+E: D. Enable VPC Flow Logs and create a metric filter for memory usage.
+[pause 12]
+L: Réponse ?
+R: C. La mémoire n'est jamais collectée nativement sur EC2, il faut l'agent CloudWatch. A est le piège : cette métrique n'existe pas dans le namespace EC2. B, le detailed monitoring donne des métriques toutes les minutes, mais toujours pas la mémoire. D, les Flow Logs parlent de réseau.
+R: Question deux.
+E: Question 2. A company needs to stream application logs from Amazon CloudWatch Logs to Amazon OpenSearch Service in near real time for analysis. Which solution meets this requirement with the LEAST operational overhead?
+E: A. Create a subscription filter on the log group that sends the logs to Amazon OpenSearch Service.
+E: B. Export the log group to Amazon S3 every hour, and load the files into OpenSearch with a Lambda function.
+E: C. Create a metric filter on the log group and send the metric to OpenSearch.
+E: D. Configure an SQS queue as the destination of the log group and poll it from an EC2 instance.
+[pause 12]
+L: Réponse ?
+R: A. Temps réel, c'est un subscription filter. B, l'export S3 est du batch, avec jusqu'à douze heures de latence. C, un metric filter produit des chiffres, pas les lignes de log. D, SQS n'est pas une cible possible pour les logs.
+R: Question trois.
+E: Question 3. A company has fifty AWS accounts. The security team wants all CloudWatch Logs from application accounts to be delivered to a central logging account in near real time. Which solution meets this requirement?
+E: A. In each account, create a subscription filter that sends logs to a Lambda function in the central account.
+E: B. In the central account, create a CloudWatch Logs destination backed by Amazon Kinesis Data Firehose, with a destination policy that allows the application accounts. In each application account, create a subscription filter that targets this destination.
+E: C. Export the logs from each account to an S3 bucket in the central account every day.
+E: D. Create a CloudWatch dashboard in the central account that displays logs from all accounts.
+[pause 15]
+L: Réponse ?
+R: B. Le pattern de centralisation : une destination dans le compte central, adossée à Kinesis Data Streams ou Firehose, avec une destination policy, et un subscription filter dans chaque compte. A, une destination cross-compte ne peut pas être une Lambda. C n'est pas du temps réel. D affiche, mais ne livre rien.
+R: Question quatre.
+E: Question 4. A CloudWatch alarm monitors a custom metric that is published only when the application records an error. When there are no errors, the alarm goes to the INSUFFICIENT DATA state, which confuses the operations team. The alarm should be in the OK state when no data is published. What should the DevOps engineer do?
+E: A. Set the treat missing data parameter of the alarm to notBreaching.
+E: B. Set the treat missing data parameter of the alarm to breaching.
+E: C. Increase the number of evaluation periods.
+E: D. Publish the metric with high resolution.
+[pause 12]
+L: Réponse ?
+R: A. Pas de donnée veut dire pas d'erreur, donc il faut traiter les données manquantes comme non critiques : not breaching. B ferait passer l'alarme en ALARM à chaque période sans erreur. C et D ne changent pas le traitement des données manquantes.
+R: Question cinq.
+E: Question 5. A security engineer must find out which IAM principal deleted an Amazon S3 bucket yesterday, and from which IP address. Which service provides this information?
+E: A. AWS Config
+E: B. Amazon GuardDuty
+E: C. VPC Flow Logs
+E: D. AWS CloudTrail
+[pause 10]
+L: Réponse ?
+R: D. Qui a fait quoi, quand, et depuis où : CloudTrail. Delete Bucket est un management event, enregistré par défaut. Config montrerait que le bucket a disparu, mais pas qui l'a supprimé. GuardDuty cherche des menaces. Les Flow Logs ne voient pas les appels d'API.
+R: Question six.
+E: Question 6. An on-call team receives too many pages. The team wants to be paged only when both the API latency alarm and the database CPU alarm are in the ALARM state at the same time. Which solution meets this requirement with the LEAST effort?
+E: A. Create a Lambda function that checks both alarms every minute and sends a notification.
+E: B. Create a composite alarm with an AND condition on the two alarms, and configure the SNS action only on the composite alarm.
+E: C. Use metric math to add the two metrics and create an alarm on the sum.
+E: D. Increase the threshold of both alarms.
+[pause 12]
+L: Réponse ?
+R: B. La composite alarm combine des alarmes avec ET et OU, c'est exactement le besoin. A, c'est du polling maison. C, additionner une latence et un CPU n'a pas de sens. D réduit le bruit au hasard, sans respecter la condition.
+R: Question sept.
+E: Question 7. A company wants to detect when its public website login page stops working, before customers report the problem. The check must run every five minutes and simulate a user logging in. Which solution meets this requirement?
+E: A. Create a CloudWatch Synthetics canary that runs a GUI workflow script every five minutes, and alarm on its success metric.
+E: B. Use CloudWatch RUM to collect data from real user sessions.
+E: C. Create a Route 53 health check on the home page.
+E: D. Enable AWS X-Ray tracing on the application.
+[pause 12]
+L: Réponse ?
+R: A. Simuler un utilisateur depuis l'extérieur, toutes les cinq minutes : un canary Synthetics, avec un script de parcours d'interface. B dépend de vrais utilisateurs, donc ne détecte rien avant eux. C vérifie seulement qu'une page répond, sans faire de login. D trace les requêtes, mais ne génère pas de trafic.
+R: Question huit.
+E: Question 8. A microservices application has high latency on some requests. The team needs to identify which downstream service causes the delay, and filter traces by customer ID. Which solution meets these requirements?
+E: A. Add the customer ID as metadata in AWS X-Ray segments.
+E: B. Use CloudWatch Logs Insights to search for slow requests in each service's logs.
+E: C. Add the customer ID as an annotation in AWS X-Ray segments, and use the service map and trace filters.
+E: D. Enable VPC Flow Logs and analyze them with Amazon Athena.
+[pause 12]
+L: Réponse ?
+R: C. X-Ray et sa service map identifient le service qui ralentit. Et pour filtrer par client, il faut une annotation, parce que les annotations sont indexées. A est le piège : les metadata ne sont pas indexées, on ne peut pas filtrer dessus. B est possible, mais manuel et service par service. D ne voit pas la latence applicative.
+L: Fin de l'épisode. En dessous de six sur huit, réécoute l'épisode quatre.
+R: Prochain épisode : les questions sur Incident et Event Response.

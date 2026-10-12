@@ -1,0 +1,77 @@
+# Épisode 10 — Questions d'examen en anglais : Configuration Management et IaC
+L: Épisode dix. Questions d'examen en anglais sur Configuration Management et Infrastructure as Code.
+R: Même format : le scénario et les options en anglais, un silence pour choisir, et la correction en français. Huit questions.
+R: Question une.
+E: Question 1. A company uses AWS Organizations. The security team must deploy a standard set of IAM roles and AWS Config rules to every account in the Workloads organizational unit, including any accounts that are added to the OU in the future. Which solution meets these requirements with the LEAST operational overhead?
+E: A. Create a CloudFormation StackSet with self-managed permissions and add each new account ID when it is created.
+E: B. Create a CloudFormation StackSet with service-managed permissions, target the Workloads OU, and enable automatic deployment.
+E: C. Use an EventBridge rule on the CreateAccount event to invoke a Lambda function that deploys a CloudFormation stack in the new account.
+E: D. Share the CloudFormation template through AWS RAM with the Workloads OU.
+[pause 12]
+L: Réponse ?
+R: B. Comptes futurs, c'est le mot-clé : StackSets en service-managed, ciblé sur l'OU, avec l'automatic deployment. A demande une action manuelle à chaque nouveau compte. C fonctionne mais c'est du code maison. D n'existe pas : RAM ne partage pas de templates CloudFormation.
+R: Question deux.
+E: Question 2. A CloudFormation stack in us-east-1 creates a shared VPC and exports its ID. A team wants to reference this VPC ID from a stack deployed in eu-west-1. What should the DevOps engineer do?
+E: A. Use the Fn ImportValue function in the eu-west-1 stack.
+E: B. Use a dynamic reference to an SSM parameter stored in us-east-1.
+E: C. Use a nested stack in eu-west-1 that points to the us-east-1 stack.
+E: D. Create a Lambda-backed custom resource in the eu-west-1 stack that reads the value from us-east-1.
+[pause 12]
+L: Réponse ?
+R: D. Les exports et Fn Import Value ne fonctionnent que dans la même région, donc A est faux. Une référence dynamique SSM lit seulement dans la région de la stack, donc B est faux. Une nested stack vit dans la même région que sa parente. La custom resource Lambda peut appeler l'API de n'importe quelle région.
+R: Question trois.
+E: Question 3. A company launches EC2 instances with CloudFormation. A user data script installs and configures the application, which takes about ten minutes. The stack currently reports CREATE COMPLETE before the application is ready, which causes downstream failures. How should the DevOps engineer fix this?
+E: A. Add a CreationPolicy to the instance with a timeout, and call cfn-signal at the end of the user data script.
+E: B. Add a DependsOn attribute to the downstream resources.
+E: C. Add a WaitCondition with a ten minute sleep in the template.
+E: D. Configure an UpdatePolicy with WaitOnResourceSignals set to true.
+[pause 12]
+L: Réponse ?
+R: A. La Creation Policy fait attendre CloudFormation jusqu'à recevoir le signal de cfn signal. B, Depends On attend seulement que la ressource soit créée, pas que l'application soit prête. C, une attente fixe, c'est fragile. D concerne les mises à jour d'un Auto Scaling group, pas la création.
+R: Question quatre.
+E: Question 4. A company has hundreds of EC2 instances across several accounts. Over time, engineers make manual changes that cause configuration drift. The company wants a required agent configuration to be reapplied automatically every thirty minutes. Which solution meets this requirement?
+E: A. Use AWS Systems Manager Run Command with a cron job on a management instance.
+E: B. Use AWS Systems Manager State Manager with an association that runs on a schedule.
+E: C. Use AWS Config to detect drift and send an email notification.
+E: D. Use CloudFormation drift detection on the stacks that created the instances.
+[pause 12]
+L: Réponse ?
+R: B. Réappliquer une configuration périodiquement, c'est la définition de State Manager. A le fait avec un cron maison, donc plus d'overhead. C et D détectent seulement, ils ne corrigent rien. Et la drift detection CloudFormation ne regarde pas ce qui est installé à l'intérieur des instances.
+R: Question cinq.
+E: Question 5. Developers need to provision approved environments by themselves, including an Amazon RDS database and EC2 instances. The developers must not have IAM permissions to create these resources directly. Which solution meets these requirements?
+E: A. Create AWS Service Catalog products from CloudFormation templates, add them to a portfolio, and assign a launch constraint with an IAM role that has the required permissions.
+E: B. Give developers access to the CloudFormation console and a library of templates in an S3 bucket.
+E: C. Create an IAM permissions boundary that allows the developers to create RDS and EC2 resources.
+E: D. Use AWS Control Tower Account Factory to create a new account for each environment.
+[pause 12]
+L: Réponse ?
+R: A. La launch constraint est la clé : c'est le rôle de Service Catalog qui crée les ressources, pas le développeur. B oblige les développeurs à avoir les permissions sur les ressources. C, une boundary n'accorde rien, et de toute façon on veut justement qu'ils n'aient pas ces droits. D crée des comptes, pas des environnements applicatifs.
+R: Question six.
+E: Question 6. A company publishes a new hardened AMI every month. The company needs to replace all instances in an Auto Scaling group with the new AMI, while keeping at least ninety percent of the capacity healthy, and with the ability to stop and roll back if problems occur. Which solution requires the LEAST effort?
+E: A. Create a new Auto Scaling group with the new AMI and switch the load balancer target group manually.
+E: B. Update the launch template and terminate instances one at a time with a script.
+E: C. Update the launch template and start an instance refresh with a minimum healthy percentage of ninety, using checkpoints.
+E: D. Update the launch template and wait for the Auto Scaling group to replace instances naturally over time.
+[pause 12]
+L: Réponse ?
+R: C. L'instance refresh est fait pour ça : pourcentage minimum d'instances saines, checkpoints, et rollback. A et B sont manuels ou scriptés. D ne remplace rien : les instances existantes gardent l'ancienne AMI jusqu'à ce qu'elles disparaissent.
+R: Question sept.
+E: Question 7. An EC2 instance in a private subnet does not appear as a managed node in AWS Systems Manager Fleet Manager. The SSM Agent is installed and running. The subnet has no NAT gateway. Which combination of actions will resolve the issue? Choose TWO.
+E: A. Attach an instance profile that includes the AmazonSSMManagedInstanceCore policy.
+E: B. Open inbound port 22 in the instance security group.
+E: C. Create interface VPC endpoints for ssm, ssmmessages and ec2messages.
+E: D. Install the CloudWatch agent on the instance.
+[pause 15]
+L: Réponse ?
+R: A et C. Les trois conditions sont l'agent, le rôle IAM et la connectivité. L'agent tourne déjà. Il reste le rôle, et le réseau : sans NAT, il faut les VPC endpoints. B est faux : SSM n'utilise pas de connexion entrante, l'agent sort vers le service. D n'a rien à voir.
+R: Question huit.
+E: Question 8. The security team must ensure that no IAM user or role in any member account, including administrators, can disable AWS CloudTrail or delete trails. Which solution meets this requirement?
+E: A. Attach an IAM policy that denies the StopLogging and DeleteTrail actions to every administrator role.
+E: B. Configure an AWS Config rule that detects when CloudTrail is disabled.
+E: C. Use an IAM permissions boundary on all administrator roles.
+E: D. Attach a service control policy to the organization root that denies the StopLogging and DeleteTrail actions.
+[pause 12]
+L: Réponse ?
+R: D. Une SCP s'impose à tout le monde dans les comptes membres, admin compris, et l'admin du compte ne peut pas la retirer. A et C peuvent être modifiés ou retirés par un administrateur du compte. B détecte, mais n'empêche pas. Et rappel : une SCP ne s'applique pas au compte de gestion, c'est pour ça que la question parle des comptes membres.
+L: Fin de l'épisode. En dessous de six sur huit, réécoute l'épisode deux.
+R: Prochain épisode : les questions sur la résilience.

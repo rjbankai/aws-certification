@@ -1,0 +1,31 @@
+# Épisode 0 — Bienvenue et technique d'examen
+L: Bienvenue dans ce podcast de révision pour la certification AWS DevOps Engineer Professional, le fameux DOP C 0 2. Je suis Léa.
+R: Et moi c'est Rémy. Le principe est simple : on reprend tes fiches de révision, domaine par domaine, et on les transforme en conversation. Tu peux nous écouter dans le métro, en marchant, en faisant la vaisselle.
+L: Il y a huit épisodes. Celui-ci, sur la technique d'examen. Puis un épisode par domaine : SDLC Automation, Configuration Management et Infrastructure as Code, Resilient Cloud Solutions, Monitoring et Logging, Incident et Event Response, et Security et Compliance. Et un dernier épisode en mode quiz éclair, pour la veille de l'examen.
+R: Dans les épisodes, on va te poser des questions. Quand tu entends une question, tu as quelques secondes de silence pour répondre dans ta tête, ou à voix haute, avant qu'on donne la réponse. C'est du rappel actif, et c'est ce qui fait vraiment rentrer les choses.
+L: Alors, Rémy, commençons par le format. Il ressemble à quoi, cet examen ?
+R: Soixante-quinze questions. Soixante-cinq sont notées, dix ne le sont pas, et tu ne sais pas lesquelles. Tu as cent quatre-vingts minutes, donc environ deux minutes vingt par question. Le score de passage est de sept cent cinquante sur mille.
+L: Et il faut réussir chaque domaine ?
+R: Non. C'est un modèle compensatoire. Tu peux être moyen sur un domaine et très bon sur un autre. Ce qui compte, c'est le score global.
+L: L'examen est en anglais uniquement. Et il y a une astuce pour les non-anglophones.
+R: Oui, l'aménagement E S L plus trente. Tu le demandes dans ton compte AWS Certification, dans la rubrique des aménagements d'examen. Ça te donne trente minutes de plus. Mais attention : il ne s'applique qu'aux examens planifiés après son approbation. Vérifie que ta convocation indique bien deux cent dix minutes.
+L: Parlons des poids des domaines. Le plus gros ?
+R: SDLC Automation, vingt-deux pour cent. Ensuite Configuration Management et IaC, dix-sept pour cent, à égalité avec Security et Compliance. Puis Resilient Cloud Solutions et Monitoring, quinze pour cent chacun. Et Incident et Event Response, quatorze pour cent.
+L: Maintenant, la méthode. Comment on attaque une question ?
+R: Règle numéro un : lis la dernière phrase en premier. C'est là que se trouvent la vraie question et la contrainte. Least operational overhead, most cost-effective, minimum downtime, fastest recovery. Cette contrainte décide de tout.
+L: Donc on lit la fin, puis le scénario.
+R: Exactement. Et en lisant le scénario, tu cherches les mots qui éliminent. Règle numéro deux : élimine d'abord. Sur quatre options, deux sont en général fausses pour une raison technique claire. Un service qui ne fait pas ça. Une cible non supportée. Une action manuelle.
+L: Et quand il reste deux options qui ont l'air bonnes ?
+R: Règle de tri : on prend le plus managé, le plus automatisé, celui qui demande le moins de code maison. Retiens bien ça : du polling, un cron, un script sur une instance EC2, une action manuelle dans la console, c'est presque toujours la mauvaise réponse.
+L: Petite question pour vérifier. Une option propose une fonction Lambda déclenchée toutes les cinq minutes pour vérifier si un bucket a changé. Une autre propose une règle EventBridge. Laquelle est la bonne ?
+[pause 4]
+R: EventBridge. Le polling toutes les cinq minutes, c'est le distracteur classique. Si un événement existe, on réagit à l'événement.
+L: Et les questions à réponses multiples, les fameux choose two ou choose three ?
+R: Pas de note partielle. Chaque option que tu coches doit être vraie, et en plus répondre à la contrainte. Une option vraie mais hors sujet, c'est une option fausse.
+L: Gestion du temps ?
+R: Premier passage : tu marques avec le drapeau tout ce qui dépasse trois minutes, et tu avances. Tu reviens à la fin. Et ne laisse jamais une question vide : il n'y a pas de pénalité pour une mauvaise réponse.
+L: Et si on tombe sur une question complètement inconnue ?
+R: Pas de panique. C'est peut-être une des dix questions non notées. Tu élimines ce que tu peux, tu choisis l'option la plus managée, et tu passes à la suite.
+L: Dernier conseil avant de commencer les domaines ?
+R: Ces épisodes ne remplacent pas les questions d'entraînement. Écoute-les pour réviser, mais continue les questions Tutorials Dojo, et lis l'explication de chaque option, même quand tu as bon. C'est là que tu gagnes le plus de points.
+L: Allez, on passe au premier domaine, le plus gros : SDLC Automation. À tout de suite.

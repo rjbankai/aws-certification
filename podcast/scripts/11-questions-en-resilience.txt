@@ -1,0 +1,77 @@
+# Épisode 11 — Questions d'examen en anglais : Resilient Cloud Solutions
+L: Épisode onze. Questions d'examen en anglais sur la résilience.
+R: Dans ce domaine, cherche toujours trois choses dans le scénario : le RTO, le RPO, et la contrainte de coût. Huit questions.
+R: Question une.
+E: Question 1. A company runs a critical application on Amazon EC2 instances with an Amazon Aurora MySQL database in us-east-1. The company needs a disaster recovery solution in us-west-2 with an RPO of a few seconds and an RTO of less than thirty minutes. The solution must be as cost-effective as possible. Which solution meets these requirements?
+E: A. Use AWS Backup to copy daily snapshots to us-west-2, and restore them during a disaster.
+E: B. Create an Aurora global database with a secondary cluster in us-west-2. Keep an AMI and a launch template ready in us-west-2, and scale out the application tier during a disaster.
+E: C. Run a full-size copy of the application and database in us-west-2 that serves traffic at all times.
+E: D. Use an Aurora read replica in the same Region and promote it during a disaster.
+[pause 15]
+L: Réponse ?
+R: B. C'est du pilot light : les données sont chaudes grâce à Aurora Global Database, avec un RPO de l'ordre de la seconde, et le compute est froid mais prêt. A a un RPO d'une journée. C tient les objectifs mais coûte bien trop cher. D reste dans la même région, ça ne protège pas d'une panne régionale.
+R: Question deux.
+E: Question 2. A company runs a multiplayer game that uses UDP traffic, with endpoints in two AWS Regions. During a regional failure, players must be redirected to the healthy Region within seconds. Players' firewalls only allow a fixed set of IP addresses. Which solution meets these requirements?
+E: A. Use AWS Global Accelerator with endpoint groups in both Regions.
+E: B. Use Amazon Route 53 failover routing with health checks and a TTL of sixty seconds.
+E: C. Use Amazon CloudFront with an origin group for failover.
+E: D. Use an Application Load Balancer in each Region with Route 53 latency routing.
+[pause 12]
+L: Réponse ?
+R: A. Trois indices : UDP, quelques secondes, et des IP fixes. Global Accelerator coche les trois. Route 53 dépend du cache DNS, et ne donne pas d'IP fixes. CloudFront et l'ALB ne gèrent pas l'UDP.
+R: Question trois.
+E: Question 3. An application runs on EC2 instances in an Auto Scaling group behind an Application Load Balancer. Sometimes the application process crashes, but the instance keeps running. The load balancer marks the instance as unhealthy, but the Auto Scaling group does not replace it. How should the DevOps engineer fix this with the LEAST effort?
+E: A. Create a CloudWatch alarm on the UnHealthyHostCount metric that invokes a Lambda function to terminate the instance.
+E: B. Install a script on each instance that restarts the application process.
+E: C. Change the health check type of the Auto Scaling group from EC2 to ELB.
+E: D. Increase the health check grace period of the Auto Scaling group.
+[pause 12]
+L: Réponse ?
+R: C. Avec le type EC2, l'Auto Scaling group regarde seulement si la machine tourne. Avec le type ELB, il utilise le health check du load balancer, et remplace l'instance. A et B sont du code maison. D retarde les vérifications, ça ne règle rien.
+R: Question quatre.
+E: Question 4. A company must protect its backups against deletion, including deletion by users with administrator access and by the root user, to meet a regulatory requirement. Which solution meets this requirement?
+E: A. Use AWS Backup with a vault access policy that denies DeleteRecoveryPoint for all IAM users.
+E: B. Use AWS Backup Vault Lock in compliance mode.
+E: C. Use AWS Backup Vault Lock in governance mode.
+E: D. Enable MFA on the root user and remove administrator access from all users.
+[pause 12]
+L: Réponse ?
+R: B. Le mode compliance est irréversible après le délai de grâce : personne, même root, ne peut supprimer. En governance, un utilisateur avec une permission spéciale peut contourner. A, une politique peut être modifiée par un administrateur. D ne protège pas vraiment.
+R: Question cinq.
+E: Question 5. A serverless application uses AWS Lambda functions that connect to an Amazon RDS for PostgreSQL database. During traffic spikes, the database reaches its maximum number of connections and the application fails. After a Multi-AZ failover, the reconnection storm causes further errors. Which solution will MOST effectively solve these problems?
+E: A. Increase the max connections parameter of the database.
+E: B. Add a read replica and send all queries to it.
+E: C. Set the reserved concurrency of the Lambda functions to one.
+E: D. Place Amazon RDS Proxy between the Lambda functions and the database.
+[pause 12]
+L: Réponse ?
+R: D. RDS Proxy mutualise les connexions, et réduit le temps de failover. A repousse le problème sans le régler. B ne gère pas les écritures. C bride l'application à une seule exécution à la fois, ce qui casse les performances.
+R: Question six.
+E: Question 6. An order processing application uses an Amazon SQS standard queue. Some orders are processed twice. Processing an order takes up to two minutes, and the visibility timeout of the queue is thirty seconds. What should the DevOps engineer do FIRST?
+E: A. Increase the visibility timeout to more than the maximum processing time.
+E: B. Convert the queue to a FIFO queue.
+E: C. Enable long polling on the queue.
+E: D. Add a dead letter queue with a max receive count of one.
+[pause 12]
+L: Réponse ?
+R: A. Le traitement dure deux minutes, mais le message redevient visible après trente secondes. Un autre consommateur le reprend, d'où le double traitement. B change de type de file, mais ne règle pas la cause. C réduit les appels à vide, sans rapport. D enverrait des messages valides dans la DLQ.
+R: Question sept.
+E: Question 7. A company has a stateless web application with a recovery time objective of four hours and a recovery point objective of twenty four hours. Leadership wants the lowest possible cost for disaster recovery. Which strategy should the company use?
+E: A. Pilot light
+E: B. Warm standby
+E: C. Backup and restore
+E: D. Multi-site active active
+[pause 10]
+L: Réponse ?
+R: C. Quatre heures de RTO et une journée de RPO : c'est large. La stratégie la moins chère qui tient les objectifs, c'est Backup and Restore. Les trois autres tiennent aussi, mais coûtent plus. La consigne : pas la plus robuste, la moins chère qui suffit.
+R: Question huit.
+E: Question 8. A company wants to verify that its multi-Region failover actually works, by safely injecting failures such as terminating instances and adding network latency, and by stopping the experiment automatically if a business metric degrades too much. Which service should the company use?
+E: A. AWS Resilience Hub
+E: B. AWS Fault Injection Service with stop conditions based on CloudWatch alarms
+E: C. Amazon Route 53 Application Recovery Controller readiness checks
+E: D. CloudWatch Synthetics canaries
+[pause 12]
+L: Réponse ?
+R: B. Injecter des pannes, c'est FIS, et les stop conditions sont des alarmes CloudWatch. Resilience Hub évalue l'architecture par rapport aux objectifs, il peut lancer des tests FIS, mais l'outil d'injection, c'est FIS. Les readiness checks vérifient que la région de secours est prête, sans injecter de panne. Les canaries surveillent, ils ne cassent rien.
+L: Fin de l'épisode. En dessous de six sur huit, réécoute l'épisode trois.
+R: Prochain épisode : les questions sur Monitoring et Logging.

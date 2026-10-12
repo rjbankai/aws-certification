@@ -1,0 +1,196 @@
+# Épisode 7 — Quiz éclair de la veille
+L: Dernier épisode. Le quiz éclair, à écouter la veille, et pourquoi pas le matin de l'examen.
+R: Le principe : Léa te donne un scénario, tu as quelques secondes pour trouver la réponse, puis je la donne. Une ligne, un réflexe. Rien de nouveau, que du rappel.
+L: Prêt ? On commence par le déploiement.
+L: Zéro downtime et rollback instantané.
+[pause 3]
+R: Blue/green. CodeDeploy, swap de CNAME sur Elastic Beanstalk, ou alias Lambda.
+L: Limiter le blast radius d'un déploiement.
+[pause 3]
+R: Canary ou linear, avec une alarme CloudWatch et le rollback automatique.
+L: Tester la nouvelle version avant le trafic réel, sur ECS.
+[pause 3]
+R: Le hook After Allow Test Traffic. Et sur Lambda, Before Allow Traffic.
+L: Elastic Beanstalk, pleine capacité pendant le déploiement, surcoût minimal.
+[pause 3]
+R: Rolling with additional batch.
+L: Le déploiement Elastic Beanstalk le plus sûr.
+[pause 3]
+R: Immutable.
+L: Empêcher le push sur main dans CodeCommit.
+[pause 3]
+R: Une politique IAM avec un Deny et la condition codecommit References.
+L: Pipeline cross-compte.
+[pause 3]
+R: Customer managed key KMS, bucket policy, et rôle cross-compte.
+L: Construire des images Docker dans CodeBuild.
+[pause 3]
+R: Le mode privileged.
+L: Le hook Application Stop échoue en boucle.
+[pause 3]
+R: Ignore application stop failures. C'est le script de l'ancienne révision qui plante.
+L: On passe à l'IaC et à la configuration. Une baseline sur tous les comptes, y compris les futurs.
+[pause 3]
+R: StackSets service-managed, avec l'automatic deployment sur l'OU.
+L: Partager une valeur entre des stacks de régions différentes.
+[pause 3]
+R: Une custom resource Lambda.
+L: Attendre que l'instance soit configurée avant de valider la stack.
+[pause 3]
+R: Creation Policy et cfn signal.
+L: Protéger une base RDS pendant les mises à jour CloudFormation.
+[pause 3]
+R: Une stack policy, plus Deletion Policy et Update Replace Policy en snapshot ou retain.
+L: Self-service contrôlé pour les développeurs.
+[pause 3]
+R: Service Catalog avec une launch constraint.
+L: La configuration dérive sur les instances.
+[pause 3]
+R: SSM State Manager.
+L: Supprimer SSH et les bastions.
+[pause 3]
+R: Session Manager.
+L: Une instance n'apparaît pas dans Fleet Manager.
+[pause 3]
+R: L'agent SSM, le rôle IAM, ou le réseau : NAT ou VPC endpoints.
+L: Une AMI durcie, testée et distribuée.
+[pause 3]
+R: EC2 Image Builder.
+L: OpsWorks apparaît dans une option.
+[pause 3]
+R: C'est un distracteur, il est en fin de vie. On préfère SSM.
+L: La résilience. RTO, RPO et budget donnés.
+[pause 3]
+R: La stratégie de reprise la moins chère qui tient les objectifs.
+L: Failover en secondes, IP fixes, le DNS est trop lent.
+[pause 3]
+R: Global Accelerator.
+L: Reprise cross-région d'une base relationnelle.
+[pause 3]
+R: Aurora Global Database.
+L: NoSQL actif-actif multi-régions.
+[pause 3]
+R: DynamoDB Global Tables.
+L: Des sauvegardes indestructibles.
+[pause 3]
+R: Backup Vault Lock en mode compliance, ou S3 Object Lock.
+L: Trop de connexions à la base, depuis Lambda ou après un failover.
+[pause 3]
+R: RDS Proxy.
+L: L'ASG ne remplace pas l'instance dont l'application est plantée.
+[pause 3]
+R: Health check type ELB.
+L: Valider la bascule de reprise.
+[pause 3]
+R: FIS. Et pour vérifier les objectifs de RTO et de RPO : Resilience Hub.
+L: Le monitoring. Mémoire ou disque sur EC2.
+[pause 3]
+R: L'agent CloudWatch.
+L: Alerter sur un mot dans les logs.
+[pause 3]
+R: Un metric filter et une alarme.
+L: Logs en temps réel vers OpenSearch, ou centralisés multi-comptes.
+[pause 3]
+R: Un subscription filter, vers Kinesis ou Firehose.
+L: Trop d'alertes.
+[pause 3]
+R: Une composite alarm. Et pour les faux positifs cycliques : l'anomaly detection.
+L: Détecter une panne avant les utilisateurs.
+[pause 3]
+R: Un canary Synthetics.
+L: Métriques custom depuis Lambda sans appel d'API.
+[pause 3]
+R: EMF, l'Embedded Metric Format.
+L: Prouver que les logs d'audit sont intacts.
+[pause 3]
+R: Log file validation, Object Lock, et un compte dédié.
+L: Les incidents. Réagir à un appel d'API.
+[pause 3]
+R: EventBridge. Jamais du polling ou un cron.
+L: Une clé IAM exposée.
+[pause 3]
+R: L'événement AWS Health RISK CREDENTIALS EXPOSED, puis une automatisation.
+L: Échecs d'une Lambda asynchrone.
+[pause 3]
+R: Les destinations On Failure.
+L: Échecs d'une Lambda qui lit SQS.
+[pause 3]
+R: Une DLQ sur la file, et Report Batch Item Failures.
+L: Un enregistrement Kinesis bloque le shard.
+[pause 3]
+R: Bisect, un maximum de retries, et une on-failure destination.
+L: Astreinte, escalade et runbook.
+[pause 3]
+R: Incident Manager.
+L: Détecter des anomalies sans définir de seuils.
+[pause 3]
+R: DevOps Guru.
+L: Une stack en UPDATE ROLLBACK FAILED.
+[pause 3]
+R: Continue Update Rollback.
+L: ECS n'arrive pas à tirer l'image.
+[pause 3]
+R: Le task execution role, ou le réseau vers ECR.
+L: Et la sécurité pour finir. Interdire une action partout, même aux admins.
+[pause 3]
+R: Une SCP.
+L: Les devs créent des rôles sans escalade de privilèges.
+[pause 3]
+R: Une permission boundary.
+L: Un bucket accessible uniquement par mon organisation.
+[pause 3]
+R: aws Principal Org ID.
+L: Menace, CVE, données sensibles, agrégation, enquête.
+[pause 4]
+R: GuardDuty, Inspector, Macie, Security Hub, Detective.
+L: Une clé KMS en cross-compte.
+[pause 3]
+R: Une customer managed key et sa key policy.
+L: Bloquer une IP.
+[pause 3]
+R: Une NACL, ou WAF.
+L: Une instance compromise.
+[pause 3]
+R: Security group vide, snapshot, et on ne la termine pas.
+L: Et maintenant, les chiffres. Durée maximale d'une Lambda.
+[pause 2]
+R: Quinze minutes.
+L: Retries d'une Lambda asynchrone.
+[pause 2]
+R: Deux.
+L: Délai maximum d'un export de logs vers S3.
+[pause 2]
+R: Douze heures.
+L: Historique d'événements CloudTrail.
+[pause 2]
+R: Quatre-vingt-dix jours.
+L: Point-in-time recovery DynamoDB.
+[pause 2]
+R: Trente-cinq jours.
+L: Rétention maximale de Kinesis Data Streams.
+[pause 2]
+R: Trois cent soixante-cinq jours.
+L: SLA de S3 Replication Time Control.
+[pause 2]
+R: Quinze minutes.
+L: Failover RDS Multi-AZ instance.
+[pause 2]
+R: Soixante à cent vingt secondes.
+L: RTO et RPO d'Aurora Global Database.
+[pause 2]
+R: Moins d'une minute, et environ une seconde.
+L: Timeout d'une custom resource CloudFormation.
+[pause 2]
+R: Une heure.
+L: Premiers avertissements d'expiration d'un certificat ACM.
+[pause 2]
+R: Quarante-cinq jours.
+L: Délai de suppression d'une clé KMS.
+[pause 2]
+R: Sept à trente jours.
+L: Parameter Store standard contre Secrets Manager, en taille.
+[pause 2]
+R: Quatre kilo-octets contre soixante-quatre.
+L: C'est terminé. Un dernier mot, Rémy ?
+R: Le jour de l'examen : lis la dernière phrase en premier, élimine les options manuelles et le polling, et entre deux bonnes réponses, choisis la plus managée. Tu as fait le travail. Dors bien la veille.
+L: Bonne chance pour le vingt-sept octobre !

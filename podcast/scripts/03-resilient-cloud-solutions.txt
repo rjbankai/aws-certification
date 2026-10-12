@@ -1,0 +1,80 @@
+# Épisode 3 — Resilient Cloud Solutions (15 %)
+L: Épisode trois. Resilient Cloud Solutions, quinze pour cent de l'examen. Haute disponibilité, scalabilité, et reprise après sinistre.
+R: Et un conseil avant tout. Dans ce domaine, la question te donne presque toujours un RTO, un RPO et une contrainte de coût. La bonne réponse, c'est la solution la moins chère qui tient les deux objectifs. Pas la plus robuste.
+L: Alors justement, RPO et RTO. On les confond souvent.
+R: Le RPO, c'est la perte de données acceptable. On regarde en arrière : à quelle fréquence on sauvegarde. Le RTO, c'est le temps acceptable pour revenir en service. On regarde en avant : à quelle vitesse on bascule.
+L: Les quatre stratégies de reprise.
+R: Un : Backup and Restore. Rien ne tourne dans la région de secours, on a juste des sauvegardes répliquées. RPO et RTO en heures. Le moins cher. Deux : Pilot Light. Seul le cœur de données tourne, la base est répliquée, et le compute est éteint mais prêt. Minutes à dizaines de minutes. Trois : Warm Standby. Une copie complète mais réduite tourne vraiment, et on la fait grandir en cas de sinistre. Secondes à minutes. Quatre : Multi-site, ou Active-Active. Tout tourne à pleine capacité et sert du trafic. Proche de zéro. Le plus cher.
+L: Un moyen mnémotechnique pour Pilot Light et Warm Standby ?
+R: Pilot Light : les données sont chaudes, le compute est froid. Warm Standby : tout est tiède, et on scale.
+L: Question. RTO de quelques minutes, coût maîtrisé, l'application n'a pas besoin de servir du trafic en temps normal dans la région de secours.
+[pause 4]
+R: Pilot Light. Si l'application devait déjà servir du trafic, on passerait à Warm Standby.
+L: Et AWS Elastic Disaster Recovery ?
+R: DRS fait de la réplication continue au niveau bloc, de serveurs on-prem ou EC2 vers une région cible. RPO de l'ordre de la seconde, RTO de quelques minutes. C'est la réponse à : répliquer des serveurs existants sans les réarchitecturer.
+L: Passons au routage du trafic. Route 53 et ses politiques.
+R: Simple : un seul enregistrement. Weighted : répartition en pourcentage, pour un canary ou une migration progressive. Latency : vers la région la plus rapide pour le client. Failover : actif-passif avec un health check, le classique de la reprise. Geolocation et geoproximity : conformité réglementaire, ou rapprochement géographique avec un biais. Et multivalue answer : jusqu'à huit réponses saines.
+L: Les health checks Route 53 ?
+R: Trois types. Sur un endpoint. Calculé, qui combine d'autres health checks. Ou basé sur une alarme CloudWatch.
+L: Question. Route 53 doit surveiller une ressource privée, non exposée sur Internet. Comment faire ?
+[pause 4]
+R: Un health check basé sur une alarme CloudWatch. Les health checkers de Route 53 sont sur Internet, ils ne peuvent pas joindre une ressource privée.
+L: La limite du DNS ?
+R: Le TTL. Les clients mettent la réponse en cache, donc la bascule n'est pas instantanée. Si la question insiste sur un failover en quelques secondes, ou sur des IP fixes, la réponse est Global Accelerator.
+L: Justement, Global Accelerator contre CloudFront.
+R: Global Accelerator : deux adresses IP anycast statiques, du trafic TCP ou UDP qui passe par le réseau AWS, et un failover régional en quelques secondes, sans dépendre du DNS. Idéal pour les protocoles non HTTP, et quand le client doit mettre des IP en liste blanche. CloudFront : un cache HTTP en edge, avec des origin groups et l'origin failover sur des codes d'erreur configurables.
+L: Et Route 53 ARC ?
+R: Application Recovery Controller. Des readiness checks pour vérifier que la région de secours est vraiment prête. Et des routing controls, des interrupteurs de bascule hautement disponibles, avec des safety rules pour éviter de tout éteindre par erreur.
+L: Les load balancers maintenant.
+R: ALB en couche sept, HTTP. NLB en couche quatre, avec une IP statique par zone de disponibilité, et une latence très faible. GWLB pour les appliances réseau. Le cross-zone load balancing est activé par défaut et gratuit sur l'ALB, mais désactivé par défaut sur le NLB, et facturé entre zones.
+L: Question classique. Un Auto Scaling group ne remplace pas une instance dont l'application est plantée. Pourquoi ?
+[pause 4]
+R: Le health check de l'Auto Scaling group est de type EC2. Il voit seulement que l'instance tourne, pas que l'application est morte. Il faut passer le health check type à ELB.
+L: Les données maintenant. RDS Multi-AZ.
+R: Deux variantes. Multi-AZ instance : réplication synchrone, standby non lisible, failover par DNS en soixante à cent vingt secondes. Multi-AZ DB cluster : un writer et deux standbys lisibles, failover en moins de trente-cinq secondes. Dans les deux cas, c'est de la haute disponibilité dans une seule région.
+L: Et les read replicas ?
+R: Réplication asynchrone, lisibles, et possibles en cross-région. On peut promouvoir une read replica manuellement, c'est un mécanisme de reprise. Mais le but premier, c'est de scaler les lectures.
+L: Donc Multi-AZ, c'est pour…
+R: La haute disponibilité. Read replica, c'est pour la scalabilité en lecture, et pour la reprise cross-région.
+L: Aurora ?
+R: Six copies sur trois zones, et des réplicas promus automatiquement. Pour le cross-région : Aurora Global Database. Réplication en moins d'une seconde, RTO de moins d'une minute, RPO d'environ une seconde. Et quelques extras : Backtrack pour rembobiner sans restaurer, le cloning rapide, et Serverless v2 pour les charges imprévisibles.
+L: Question. Reprise cross-région pour une base relationnelle, RPO d'une seconde.
+[pause 3]
+R: Aurora Global Database.
+L: Et pour du NoSQL actif-actif multi-régions ?
+[pause 3]
+R: DynamoDB Global Tables. Et côté DynamoDB, retiens aussi le point-in-time recovery sur trente-cinq jours, et DAX pour un cache en microsecondes.
+L: Les autres services de données ?
+R: S3 avec la Cross-Region Replication, et Replication Time Control pour un SLA de quinze minutes. EFS avec sa réplication. ElastiCache Redis en Multi-AZ, et Global Datastore pour le cross-région.
+L: RDS Proxy ?
+R: Il mutualise les connexions, et réduit le temps de failover d'environ soixante-six pour cent. C'est la réponse à une tempête de connexions, par exemple des milliers de Lambdas qui ouvrent chacune une connexion, ou un afflux de reconnexions après un failover.
+L: Les sauvegardes. AWS Backup.
+R: Des plans de sauvegarde : fréquence, fenêtre, passage en stockage froid. Des vaults. Des copies cross-région et cross-compte. Et des backup policies au niveau d'Organizations, pour imposer la politique à tous les comptes.
+L: Et Vault Lock ?
+R: Deux modes. Governance : un rôle privilégié peut le contourner. Compliance : irréversible après un délai de grâce d'au moins trois jours. Personne ne peut supprimer les sauvegardes, même le compte root.
+L: Question. Protéger les sauvegardes contre une suppression malveillante, même par un administrateur.
+[pause 4]
+R: Vault Lock en mode compliance. Ou S3 Object Lock en mode compliance pour des objets S3.
+L: Et DLM ?
+R: Data Lifecycle Manager. Le cycle de vie automatique des snapshots EBS et des AMI, par tags. Plus léger qu'AWS Backup si tu ne gères que de l'EBS.
+L: Scalabilité et découplage maintenant. Lambda, d'abord.
+R: Deux notions à ne pas confondre. Reserved concurrency : elle plafonne et garantit une part du quota pour une fonction. Provisioned concurrency : elle garde des environnements prêts et élimine le cold start.
+L: Le découplage, et pourquoi c'est de la résilience.
+R: SQS sert de tampon qui absorbe les pics. Les réglages qui tombent : le visibility timeout, qui doit être au moins égal à la durée de traitement, sinon le message est traité deux fois. Max receive count et une dead letter queue, pour isoler les messages empoisonnés. Le long polling, pour réduire les appels à vide. Et FIFO pour l'ordre et la déduplication.
+L: Question. Des messages SQS sont traités en double. Première chose à vérifier ?
+[pause 4]
+R: Le visibility timeout. S'il est plus court que le temps de traitement, le message redevient visible et un autre consommateur le reprend. Et dans tous les cas, le consommateur doit être idempotent.
+L: Les autres services de découplage ?
+R: SNS pour le fan-out, avec une DLQ par souscription. EventBridge pour le routage par pattern, avec archive et replay pour rejouer des événements. Kinesis Data Streams, avec une rétention jusqu'à trois cent soixante-cinq jours et l'ordre par shard.
+L: Les patterns de résilience à reconnaître ?
+R: Retry avec backoff exponentiel et jitter. Idempotence. Circuit breaker. Et la static stability : la région de secours ne doit pas dépendre d'un scaling au moment du sinistre.
+L: Comment on valide que la bascule marche vraiment ?
+R: AWS Fault Injection Service, FIS. On injecte des pannes, c'est du chaos engineering, avec des conditions d'arrêt sur alarme CloudWatch. Et AWS Resilience Hub : on déclare des objectifs de RTO et de RPO pour une application, et il évalue si l'architecture les tient, avec des recommandations.
+L: Question. Vérifier en continu qu'une application respecte ses objectifs de RTO et de RPO.
+[pause 3]
+R: Resilience Hub. Et pour tester la bascule en vrai : FIS.
+L: Un dernier réflexe sur ce domaine ?
+R: Si une option repose sur une intervention humaine pour basculer, alors que le RTO est court, elle est fausse.
+L: Résumé en trois phrases.
+R: Un : RTO, RPO et budget, on choisit la stratégie la moins chère qui tient : Backup and Restore, Pilot Light, Warm Standby, Active-Active. Deux : le DNS est limité par le TTL, pour une bascule en secondes, c'est Global Accelerator. Trois : Multi-AZ pour la haute disponibilité, read replica pour la lecture et le cross-région, Aurora Global Database pour la reprise managée.
+L: Prochain épisode : Monitoring et Logging. À tout de suite.

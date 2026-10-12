@@ -1,0 +1,77 @@
+# Épisode 13 — Questions d'examen en anglais : Incident et Event Response
+L: Épisode treize. Questions d'examen en anglais sur Incident et Event Response.
+R: Le réflexe de ce domaine : un événement arrive, on cherche la chaîne la plus automatisée. Et en dépannage, la vraie cause racine. Huit questions.
+R: Question une.
+E: Question 1. A company wants to automatically disable any IAM access key that AWS detects as exposed on a public code repository, and notify the security team. Which solution meets this requirement with the LEAST operational overhead?
+E: A. Run a Lambda function every hour that searches public GitHub repositories for the company's access keys.
+E: B. Create an Amazon EventBridge rule for AWS Health events of type AWS RISK CREDENTIALS EXPOSED that invokes a Lambda function to disable the key and publish to an SNS topic.
+E: C. Enable Amazon Macie to scan code repositories for access keys.
+E: D. Use IAM Access Analyzer to find unused access keys and delete them.
+[pause 12]
+L: Réponse ?
+R: B. AWS publie lui-même l'événement Health Risk Credentials Exposed. Une règle EventBridge et une Lambda font le reste. A, c'est du polling maison. C, Macie analyse S3, pas les dépôts de code. D traite les clés inutilisées, pas les clés exposées.
+R: Question deux.
+E: Question 2. An AWS Lambda function processes messages from an Amazon SQS queue in batches of ten. When one message in a batch fails, the whole batch is retried, and messages that were already processed successfully are processed again. What should the DevOps engineer do?
+E: A. Configure an on failure destination on the Lambda function.
+E: B. Reduce the batch size to one.
+E: C. Increase the visibility timeout of the queue.
+E: D. Enable ReportBatchItemFailures on the event source mapping and return the IDs of the failed messages from the function.
+[pause 12]
+L: Réponse ?
+R: D. Report Batch Item Failures permet de ne remettre dans la file que les messages en échec. A est le piège : la destination On Failure n'est pas supportée sur un event source mapping SQS, avec SQS c'est la DLQ de la file. B fonctionne mais tue les performances. C ne change rien au rejeu du batch.
+R: Question trois.
+E: Question 3. An AWS CloudFormation stack update failed, and the rollback also failed. The stack is now in the UPDATE ROLLBACK FAILED state, because an engineer manually deleted a security group that the stack manages. What should the DevOps engineer do to return the stack to a working state?
+E: A. Delete the stack and recreate it.
+E: B. Run continue update rollback and specify the security group in resources to skip.
+E: C. Run a new update on the stack with the original template.
+E: D. Enable termination protection and retry the update.
+[pause 12]
+L: Réponse ?
+R: B. Continue Update Rollback, en sautant la ressource qui n'existe plus. A fonctionne, mais détruit tout, ce n'est jamais la meilleure réponse. C est impossible : une stack dans cet état n'accepte pas de mise à jour. D n'a aucun rapport.
+R: Question quatre.
+E: Question 4. An Amazon ECS service on AWS Fargate fails to start new tasks. The stopped reason shows CannotPullContainerError. The image is stored in Amazon ECR in the same account. The tasks run in private subnets without a NAT gateway. Which combination of actions will resolve the issue? Choose TWO.
+E: A. Add ECR permissions to the task role.
+E: B. Make sure the task execution role has the AmazonECSTaskExecutionRolePolicy managed policy.
+E: C. Create VPC endpoints for ECR API, ECR Docker, and a gateway endpoint for Amazon S3.
+E: D. Increase the CPU and memory of the task definition.
+[pause 15]
+L: Réponse ?
+R: B et C. C'est ECS qui tire l'image, donc il faut l'execution role, pas le task role. A est le piège classique. Et sans NAT, il faut des VPC endpoints pour ECR, plus un gateway endpoint S3, parce que les couches des images sont stockées dans S3. D n'a rien à voir avec le téléchargement de l'image.
+R: Question cinq.
+E: Question 5. A company wants to be notified within minutes whenever someone creates a security group rule that allows inbound traffic from anywhere on port twenty two, and wants the rule to be removed automatically. Which solution meets this requirement with the LEAST operational overhead?
+E: A. Use the AWS Config managed rule restricted ssh with an automatic remediation that runs an SSM Automation document.
+E: B. Schedule a Lambda function every five minutes to list all security groups and remove the rule.
+E: C. Parse CloudTrail log files in Amazon S3 with Amazon Athena every hour.
+E: D. Enable Amazon GuardDuty and wait for a finding.
+[pause 12]
+L: Réponse ?
+R: A. Une règle Config managée qui détecte, et une remédiation automatique avec SSM Automation. Aucun code maison. B est du polling. C est lent et ne corrige rien. D, GuardDuty détecte des comportements malveillants, pas des erreurs de configuration.
+R: Question six.
+E: Question 6. A company needs a solution that engages the on-call engineer, escalates to a manager if the engineer does not acknowledge within fifteen minutes, opens a chat channel, and runs a diagnostic runbook automatically when a critical CloudWatch alarm fires. Which solution meets these requirements?
+E: A. Configure the alarm to publish to an SNS topic subscribed by the whole team.
+E: B. Use AWS Systems Manager OpsCenter to create an OpsItem for the alarm.
+E: C. Use AWS Systems Manager Incident Manager with a response plan, contacts, an escalation plan, a chat channel, and an Automation runbook.
+E: D. Use Amazon DevOps Guru to send insights to the on-call engineer.
+[pause 12]
+L: Réponse ?
+R: C. Engagement, escalade, canal de chat, runbook : c'est la description d'Incident Manager. A notifie tout le monde, sans escalade. B crée un ticket, sans escalade ni astreinte. D détecte des anomalies, mais ne gère pas l'incident.
+R: Question sept.
+E: Question 7. A Lambda function consumes records from an Amazon Kinesis data stream. A single malformed record causes the function to fail repeatedly, which blocks processing of the entire shard. The team wants to isolate the bad record and keep processing the other records. Which combination of settings should the team configure?
+E: A. Configure a dead letter queue on the Kinesis data stream.
+E: B. Increase the batch size and the function timeout.
+E: C. Enable BisectBatchOnFunctionError, set MaximumRetryAttempts, and configure an on failure destination on the event source mapping.
+E: D. Enable ReportBatchItemFailures and increase the visibility timeout.
+[pause 12]
+L: Réponse ?
+R: C. Bisect coupe le batch en deux pour isoler l'enregistrement fautif, le nombre de retries est limité, et l'enregistrement part vers la destination d'échec. A n'existe pas, un stream Kinesis n'a pas de DLQ. D mélange avec SQS : le visibility timeout n'existe pas dans Kinesis.
+R: Question huit.
+E: Question 8. An application in an Auto Scaling group behind an Application Load Balancer launches instances that are terminated a few minutes later, in a continuous loop. The application takes about five minutes to start. The health check grace period is sixty seconds. What is the MOST likely cause?
+E: A. The launch template uses an outdated AMI.
+E: B. The health check grace period is shorter than the application startup time, so the instances are marked unhealthy before the application is ready.
+E: C. The Auto Scaling group uses the EC2 health check type.
+E: D. The instances do not have an IAM instance profile.
+[pause 12]
+L: Réponse ?
+R: B. L'application met cinq minutes à démarrer, mais l'Auto Scaling group commence à vérifier la santé après soixante secondes. Le health check ELB échoue, et l'instance est remplacée, en boucle. C est l'inverse : avec le type EC2, l'instance ne serait pas remplacée. A et D ne provoquent pas ce cycle.
+L: Fin de l'épisode. En dessous de six sur huit, réécoute l'épisode cinq.
+R: Prochain épisode : le dernier domaine, Security et Compliance.

@@ -1,0 +1,77 @@
+# Épisode 14 — Questions d'examen en anglais : Security et Compliance
+L: Épisode quatorze, le dernier épisode de questions. Security et Compliance.
+R: Le réflexe : quel service détecte, quel mécanisme empêche, et comment on automatise sur tous les comptes. Huit questions.
+R: Question une.
+E: Question 1. A company wants to let developers create IAM roles for their Lambda functions, without allowing them to create roles with more permissions than an approved set. Which solution meets this requirement?
+E: A. Allow the iam CreateRole action only when the iam PermissionsBoundary condition key equals the ARN of an approved permissions boundary policy.
+E: B. Attach a service control policy that denies iam CreateRole in the developer accounts.
+E: C. Create the roles centrally and share them with AWS RAM.
+E: D. Require MFA for the iam CreateRole action.
+[pause 12]
+L: Réponse ?
+R: A. C'est le pattern de délégation avec permission boundary : les développeurs peuvent créer des rôles, mais seulement avec la boundary approuvée, donc pas d'escalade. B bloque complètement la création, ce n'est pas le besoin. C, RAM ne partage pas de rôles IAM. D ajoute du MFA, mais ne limite pas les permissions.
+R: Question deux.
+E: Question 2. An S3 bucket in a shared services account must be readable by all accounts in the company's AWS organization, including accounts added in the future, and by no one else. Which solution meets this requirement with the LEAST operational overhead?
+E: A. Add each account ID to the bucket policy as a principal.
+E: B. Create an IAM role in the bucket account for each member account.
+E: C. Add a bucket policy that allows s3 GetObject for all principals with a condition on aws PrincipalOrgID equal to the organization ID.
+E: D. Make the bucket public and enable S3 server access logging.
+[pause 12]
+L: Réponse ?
+R: C. La condition Principal Org ID couvre toute l'organisation, y compris les comptes futurs, sans maintenance. A et B demandent une mise à jour à chaque nouveau compte. D est une faille, toujours faux.
+R: Question trois.
+E: Question 3. Amazon GuardDuty reports that an EC2 instance is communicating with a known cryptocurrency mining command and control server. The security team wants an automated response that contains the threat while preserving evidence for a forensic investigation. Which solution meets these requirements?
+E: A. Use an EventBridge rule that invokes a Lambda function to terminate the instance immediately.
+E: B. Use an EventBridge rule on the GuardDuty finding that starts an automation to replace the instance security groups with an isolation security group that has no rules, create EBS snapshots, and detach the instance from the Auto Scaling group.
+E: C. Use GuardDuty to automatically block the traffic.
+E: D. Reboot the instance and rotate its IAM role credentials.
+[pause 15]
+L: Réponse ?
+R: B. Isoler avec un security group vide, faire des snapshots pour la forensique, sortir l'instance de l'Auto Scaling group. A détruit les preuves. C est faux : GuardDuty détecte, il ne bloque rien. D ne contient pas la menace et peut effacer des traces en mémoire.
+R: Question quatre.
+E: Question 4. An application in account A must decrypt data in an S3 bucket in account B. The objects are encrypted with SSE KMS by using the AWS managed key aws slash s3 in account B. Access to the objects fails. What should the DevOps engineer do?
+E: A. Add a statement to the key policy of the aws slash s3 key that allows account A.
+E: B. Re-encrypt the objects with a customer managed key in account B whose key policy allows account A, and grant kms Decrypt to the application role in account A.
+E: C. Add a bucket policy that allows account A to read the objects.
+E: D. Use an IAM policy in account A that allows kms Decrypt on all keys.
+[pause 15]
+L: Réponse ?
+R: B. La clé AWS managed ne peut pas être utilisée en cross-compte, et sa key policy ne peut pas être modifiée. A est donc impossible. C est nécessaire mais pas suffisant : sans accès à la clé, la lecture échoue quand même. D ne sert à rien si la key policy n'autorise pas le compte A.
+R: Question cinq.
+E: Question 5. A company wants a single place to view security findings from Amazon GuardDuty, Amazon Inspector and Amazon Macie for all accounts and all Regions in its organization, and to check compliance against the CIS AWS Foundations Benchmark. Which solution meets these requirements?
+E: A. Use Amazon Detective with a delegated administrator account.
+E: B. Use AWS Security Hub with a delegated administrator, cross Region aggregation, and the CIS standard enabled.
+E: C. Use AWS Trusted Advisor with organizational view.
+E: D. Use Amazon CloudWatch dashboards in a monitoring account.
+[pause 12]
+L: Réponse ?
+R: B. Agréger les findings et vérifier un standard comme CIS, c'est Security Hub, avec un delegated admin et l'agrégation cross-région. A, Detective sert à enquêter, pas à agréger ni à vérifier la conformité. C donne des bonnes pratiques, pas les findings de sécurité. D, il faudrait tout construire soi-même.
+R: Question six.
+E: Question 6. A web application behind an Application Load Balancer is receiving malicious traffic from a small set of IP addresses, and from many IPs that send more than two thousand requests in five minutes. Which solution meets these requirements with the LEAST operational overhead?
+E: A. Add deny rules to the security group of the load balancer.
+E: B. Write a Lambda function that parses the access logs and updates network ACLs.
+E: C. Enable AWS Shield Standard.
+E: D. Associate an AWS WAF web ACL with the load balancer, with an IP set rule that blocks the known addresses and a rate-based rule.
+[pause 12]
+L: Réponse ?
+R: D. WAF bloque les IP connues avec un IP set, et la rate-based rule gère les adresses qui envoient trop de requêtes. A est impossible : un security group ne sait pas faire de deny. B est du code maison. C est déjà actif par défaut, et ne protège que des attaques réseau de couche trois et quatre.
+R: Question sept.
+E: Question 7. A company uses a certificate that was imported into AWS Certificate Manager and attached to a load balancer. The company wants to be notified automatically before the certificate expires. Which solution meets this requirement?
+E: A. ACM renews imported certificates automatically, so no action is needed.
+E: B. Create an EventBridge rule for the ACM certificate approaching expiration event, with an SNS topic as the target.
+E: C. Run a cron job on an EC2 instance that checks the certificate expiration date every day.
+E: D. Enable CloudTrail data events for ACM.
+[pause 12]
+L: Réponse ?
+R: B. ACM émet un événement d'expiration proche, à partir de quarante-cinq jours avant. A est le piège : ACM ne renouvelle pas les certificats importés. C est un cron maison. D n'existe pas pour ce besoin.
+R: Question huit.
+E: Question 8. An auditor requires proof that AWS CloudTrail log files for all accounts have not been modified or deleted after delivery. Which combination of actions meets this requirement? Choose TWO.
+E: A. Create an organization trail with log file integrity validation enabled.
+E: B. Enable CloudTrail Insights.
+E: C. Deliver the logs to an S3 bucket in a dedicated log archive account with S3 Object Lock enabled.
+E: D. Send the logs to CloudWatch Logs with a retention of one year.
+[pause 15]
+L: Réponse ?
+R: A et C. La validation d'intégrité, avec les digest files, prouve qu'un fichier n'a pas été modifié. Object Lock dans un compte dédié empêche la suppression. B détecte une activité API anormale, sans rapport avec l'intégrité. D garde les logs, mais ne prouve rien.
+L: C'est la fin des épisodes de questions. Quarante-huit questions au total. Note tes scores par domaine : ça te dit quels épisodes réécouter en priorité.
+R: Et chaque question ratée mérite une ligne dans ta section Erreurs récurrentes. Bonne révision !

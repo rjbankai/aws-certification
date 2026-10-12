@@ -1,0 +1,110 @@
+# Épisode 8 — Duels : les notions qu'on confond
+L: Épisode huit, un format spécial : les duels. À chaque fois, deux notions que tout le monde confond. Rémy explique la différence, puis donne la phrase qui tranche.
+R: C'est sur ces paires-là que l'examen construit ses pièges. Deux options presque identiques, et une seule est juste. Si tu retiens la phrase qui tranche, tu gagnes le point.
+L: Et à la fin de chaque duel, je te pose un mini scénario. Tu as quelques secondes pour choisir. Premier duel : RDS Multi-AZ contre read replica.
+R: Multi-AZ, c'est la haute disponibilité. Réplication synchrone vers une standby dans une autre zone, dans la même région. En version instance, la standby n'est pas lisible : elle attend juste de prendre le relais. La read replica, c'est la scalabilité en lecture. Réplication asynchrone, lisible, et possible dans une autre région. On peut la promouvoir à la main, ce qui en fait un outil de reprise cross-région.
+L: La phrase qui tranche ?
+R: Multi-AZ pour survivre à une panne, read replica pour lire plus, ou pour changer de région.
+L: Scénario. Les rapports de fin de mois ralentissent la base de production.
+[pause 3]
+R: Read replica, et on envoie les rapports dessus.
+L: Duel deux : task role contre task execution role, sur ECS.
+R: Le task execution role, c'est le rôle d'ECS lui-même, au démarrage de la tâche : tirer l'image depuis ECR, écrire les logs dans CloudWatch, lire les secrets à injecter. Le task role, c'est le rôle de ton application une fois qu'elle tourne : lire dans S3, écrire dans DynamoDB.
+L: La phrase qui tranche ?
+R: Execution role, c'est ECS qui démarre. Task role, c'est ton code qui travaille.
+L: Scénario. La tâche démarre bien, mais l'application reçoit Access Denied en écrivant dans un bucket S3.
+[pause 3]
+R: Le task role. La tâche a démarré, donc l'execution role fonctionne.
+L: Duel trois : SCP contre permission boundary.
+R: Les deux sont des plafonds, aucune n'accorde de droit. La SCP s'applique à tous les utilisateurs et rôles d'un compte, ou d'une OU entière, via Organizations, sauf le compte de gestion. La permission boundary s'applique à un utilisateur ou un rôle précis, à l'intérieur d'un compte.
+L: La phrase qui tranche ?
+R: SCP pour interdire à tout un compte, même à l'admin. Boundary pour déléguer la création de rôles sans escalade de privilèges.
+L: Scénario. Interdire à tous les comptes de l'OU production de désactiver CloudTrail.
+[pause 3]
+R: Une SCP.
+L: Duel quatre : Lambda Destinations contre dead letter queue.
+R: Les destinations s'appliquent aux invocations asynchrones de Lambda. Elles envoient le résultat, succès ou échec, avec le contexte de l'erreur, vers SQS, SNS, Lambda ou EventBridge. La DLQ Lambda, c'est l'ancienne méthode, qui ne garde que l'événement. Et quand Lambda lit une file SQS, aucun des deux : la DLQ se met sur la file SQS elle-même.
+L: La phrase qui tranche ?
+R: Asynchrone, c'est destinations. File SQS, c'est la DLQ de la file, avec Report Batch Item Failures.
+L: Scénario. Une Lambda déclenchée par S3 échoue parfois, et on veut garder le message d'erreur pour analyser.
+[pause 3]
+R: Une destination On Failure. S3 invoque Lambda en asynchrone.
+L: Duel cinq : Run Command contre State Manager.
+R: Run Command exécute une commande une fois, maintenant. State Manager associe une configuration à des instances, et la réapplique selon un planning pour garder l'état voulu.
+L: La phrase qui tranche ?
+R: Run Command, c'est une fois. State Manager, c'est tout le temps.
+L: Scénario. L'agent antivirus doit toujours être installé, même si quelqu'un le désinstalle.
+[pause 3]
+R: State Manager.
+L: Duel six : Route 53 failover contre Global Accelerator.
+R: Route 53 bascule par DNS. Les clients gardent l'ancienne réponse en cache jusqu'à la fin du TTL, donc on parle de minutes. Global Accelerator donne deux IP anycast fixes, et bascule le trafic sur le réseau AWS en quelques secondes, sans dépendre du DNS. Il gère aussi le TCP et l'UDP.
+L: La phrase qui tranche ?
+R: Secondes, IP fixes ou protocole non HTTP : Global Accelerator. Sinon, Route 53 suffit, et coûte moins cher.
+L: Scénario. Un serveur de jeu en UDP doit basculer de région en moins de trente secondes.
+[pause 3]
+R: Global Accelerator.
+L: Duel sept : Vault Lock governance contre compliance.
+R: En mode governance, un utilisateur avec une permission spéciale peut retirer le verrou ou supprimer. En mode compliance, après le délai de grâce, plus personne ne peut rien supprimer, même le compte root, et le verrou est irréversible. C'est la même logique pour S3 Object Lock.
+L: La phrase qui tranche ?
+R: Governance, on peut contourner. Compliance, jamais.
+L: Scénario. Le régulateur exige que personne, même un administrateur, ne puisse supprimer les sauvegardes pendant sept ans.
+[pause 3]
+R: Mode compliance.
+L: Duel huit : reserved concurrency contre provisioned concurrency.
+R: La reserved concurrency réserve une part de la concurrence du compte pour une fonction, et la plafonne au même niveau. Elle protège les autres fonctions, ou une base derrière. La provisioned concurrency garde des environnements déjà initialisés, pour supprimer le cold start. Elle est payante.
+L: La phrase qui tranche ?
+R: Reserved pour limiter et garantir. Provisioned pour la latence.
+L: Scénario. Une API sur Lambda a des pics de latence au premier appel du matin.
+[pause 3]
+R: Provisioned concurrency. C'est du cold start.
+L: Duel neuf : metric filter contre subscription filter.
+R: Le metric filter compte des motifs dans les logs et en fait une métrique CloudWatch, sur laquelle on met une alarme. Le subscription filter envoie les lignes de log elles-mêmes, en temps réel, vers Kinesis, Firehose, Lambda ou OpenSearch.
+L: La phrase qui tranche ?
+R: Metric filter pour alerter. Subscription filter pour transporter.
+L: Scénario. Envoyer tous les logs applicatifs vers OpenSearch pour la recherche, en temps réel.
+[pause 3]
+R: Subscription filter.
+L: Duel dix : CloudTrail contre AWS Config.
+R: CloudTrail enregistre les actions : qui a appelé quelle API, quand, d'où. Config enregistre l'état des ressources : leur configuration à chaque instant, l'historique des changements, et la conformité à des règles.
+L: La phrase qui tranche ?
+R: CloudTrail, c'est qui a fait quoi. Config, c'est à quoi ça ressemblait, et est-ce conforme.
+L: Scénario. Vérifier en continu que tous les volumes EBS sont chiffrés.
+[pause 3]
+R: AWS Config, avec une règle.
+L: Duel onze : GuardDuty contre Inspector.
+R: GuardDuty détecte des comportements : une instance qui parle à une IP malveillante, des appels d'API inhabituels, du minage. Il analyse des logs. Inspector cherche des vulnérabilités connues, des CVE, dans les logiciels installés sur EC2, dans les images ECR et dans les Lambdas.
+L: La phrase qui tranche ?
+R: GuardDuty voit ce qui se passe. Inspector voit ce qui est vulnérable.
+L: Scénario. Bloquer le déploiement d'une image de conteneur qui contient une faille critique.
+[pause 3]
+R: Inspector, avec le scan ECR dans le pipeline.
+L: Duel douze : Secrets Manager contre Parameter Store.
+R: Secrets Manager fait la rotation automatique, la réplication multi-région, le partage cross-compte, et il est payant. Parameter Store est gratuit en standard, hiérarchique, mais sans rotation native.
+L: La phrase qui tranche ?
+R: Rotation, c'est Secrets Manager. Config et budget, c'est Parameter Store.
+L: Scénario. Le mot de passe de la base Aurora doit changer tous les trente jours, automatiquement.
+[pause 3]
+R: Secrets Manager.
+L: Duel treize : Deletion Policy contre stack policy.
+R: Deletion Policy, sur une ressource du template, dit quoi faire quand la ressource est supprimée : la garder, ou faire un snapshot. La stack policy protège des ressources pendant les mises à jour de la stack, par exemple en interdisant un remplacement. Mais elle ne protège pas de la suppression de la stack entière. Pour ça : la termination protection.
+L: La phrase qui tranche ?
+R: Stack policy contre les mises à jour. Deletion Policy et termination protection contre la suppression.
+L: Scénario. Une mise à jour du template risque de remplacer la base RDS. On veut l'interdire.
+[pause 3]
+R: Une stack policy avec un Deny sur Update Replace.
+L: Duel quatorze : lifecycle hook contre warm pool contre instance refresh. Un trio.
+R: Le lifecycle hook met une instance en pause pendant son lancement ou sa terminaison, pour faire quelque chose : installer, récupérer des logs. Le warm pool garde des instances préparées et arrêtées pour démarrer vite. L'instance refresh remplace progressivement toute la flotte, par exemple après une nouvelle AMI.
+L: La phrase qui tranche ?
+R: Hook pour agir pendant la transition. Warm pool pour aller vite. Instance refresh pour tout remplacer.
+L: Scénario. Récupérer les logs d'une instance avant qu'elle soit terminée par un scale-in.
+[pause 3]
+R: Un lifecycle hook sur la terminaison.
+L: Dernier duel, quinze : security group contre NACL.
+R: Le security group est stateful : la réponse est autorisée automatiquement. Il n'a que des règles allow, au niveau de l'interface réseau. La NACL est stateless, il faut autoriser l'aller et le retour. Elle a des règles allow et deny, au niveau du subnet, évaluées dans l'ordre des numéros.
+L: La phrase qui tranche ?
+R: Bloquer une IP précise : NACL, puisque seule elle sait dire non.
+L: Scénario. Une IP connue attaque le subnet public. La bloquer au niveau réseau.
+[pause 3]
+R: Une règle deny dans la NACL. Ou WAF si c'est du HTTP derrière un ALB ou CloudFront.
+L: Quinze duels. Réécoute cet épisode deux ou trois fois avant l'examen : ces phrases doivent sortir toutes seules.
+R: Et maintenant, place aux questions d'examen en anglais, dans les épisodes suivants.
