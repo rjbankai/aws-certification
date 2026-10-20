@@ -1,0 +1,74 @@
+# Principe — Artefacts : dépôts, accès et cycle de vie, en schémas
+@slide title Artefacts : dépôts, accès, cycle de vie
+Principe en schémas · Domaine 1
+CodeArtifact, ECR et S3 : où ranger quoi, qui peut lire, combien de temps garder
+@end
+L: Les artefacts. Rémy, on en a déjà parlé, qu'est-ce qui manquait ?
+R: Une vue d'ensemble : quel dépôt pour quel type d'artefact, comment on y donne accès, y compris depuis un autre compte, et comment on fait le ménage.
+@slide diagram Trois dépôts, trois usages
+node cb 1 38 18 24 | CodeBuild | produit les artefacts | 🔨 | service
+node ca 28 4 30 26 | CodeArtifact | packages npm, pip, Maven | 📦 | ou
+node ecr 28 37 30 26 | Amazon ECR | images de conteneurs | 🐳 | proactive
+node s3 28 70 30 26 | Amazon S3 | zip, artefacts du pipeline | 🪣 | data
+node up 67 4 32 26 | Upstream | npmjs, PyPI : proxy + cache | 🌐 | ou
+node run 67 37 32 26 | ECS · EKS · Lambda | tirent l'image | 🚀 | account
+node cd 67 70 32 26 | CodeDeploy · CloudFormation | lisent le zip | 📄 | account
+arrow a1 cb ca | | | ou
+arrow a2 cb ecr | | | proactive
+arrow a3 cb s3 | | | data
+arrow b1 ca up | upstream | dashed | ou
+arrow b2 ecr run | | | account
+arrow b3 s3 cd | | | account
+@end
+@show cb ca ecr s3 a1 a2 a3
+@flow a1 a2 a3
+L: Où ranger quoi ?
+R: Trois dépôts. {CodeArtifact} pour les packages : {npm}, {pip}, {Maven}, {NuGet}. {Amazon ECR} pour les images de conteneurs. Et {Amazon S3} pour les artefacts de pipeline, comme les {zip} de déploiement.
+@show up b1
+@focus ca b1 up
+R: {CodeArtifact} peut servir de proxy vers les dépôts publics, avec les {upstream repositories} : les dépendances sont mises en cache et contrôlées.
+@show run cd b2 b3
+@focus ecr b2 run s3 b3 cd
+@flow b2 b3
+R: Ensuite, {ECS}, {EKS} et {Lambda} tirent les images depuis {ECR}, et {CodeDeploy} ou {CloudFormation} lisent les {zip} dans {S3}.
+@unfocus
+@slide diagram Donner accès, y compris à un autre compte
+group tools 1 4 46 92 | Compte outils (dépôts) | org
+node ca 4 12 40 26 | CodeArtifact | domain policy + repository policy | 📦 | ou
+node ecr 4 60 40 28 | ECR | repository policy | 🐳 | proactive
+group prod 53 4 46 92 | Compte production | account
+node cb 56 12 40 26 | CodeBuild | GetAuthorizationToken + GetServiceBearerToken | 🔨 | service
+node ecs 56 60 40 28 | ECS / EKS | rôle : ecr:GetAuthorizationToken | 🚀 | account
+arrow t1 cb ca | jeton, 12 h max | | ou
+arrow t2 ecs ecr | pull cross-compte | | proactive
+@end
+@show tools prod ca cb t1
+@flow t1
+L: Comment un build accède à {CodeArtifact} ?
+R: Il demande un jeton d'autorisation, valable douze heures au maximum. Son rôle a besoin de {codeartifact GetAuthorizationToken}, et aussi de {sts GetServiceBearerToken}. Un piège classique.
+@focus ca
+R: Pour un accès depuis un autre compte, il faut aussi les politiques de ressource côté dépôt : la {domain policy} et la {repository policy}.
+@show ecr ecs t2
+@focus ecs t2 ecr
+@flow t2
+R: Pour {ECR}, c'est le même schéma qu'avec {S3}. Une {repository policy} sur le dépôt autorise le compte de production à tirer les images. Et le rôle qui tire, côté production, a besoin de {ecr GetAuthorizationToken}. Toujours les deux côtés.
+@unfocus
+@slide cards Le cycle de vie
+ECR :: **Lifecycle policy** : garder les N dernières images, expirer les images sans tag · tags immuables · scan basic ou enhanced
+S3 :: Versioning + **lifecycle rules** : passage en Glacier, expiration des anciennes versions · chiffrement KMS
+CodeArtifact :: Statuts des versions : Unlisted, Archived, Disposed · upstream mis en cache
+Image Builder :: Container recipes → images durcies poussées dans ECR, comme pour les AMI
+@end
+@+2
+L: Et le ménage ?
+R: Sur {ECR}, une {lifecycle policy} : par exemple garder les dix dernières images et supprimer les images sans {tag} après quelques jours. Sur {S3}, le {versioning} avec des {lifecycle rules} vers {Glacier}, et l'expiration des anciennes versions.
+@+2
+R: {CodeArtifact} gère des statuts de version, comme {Archived} ou {Disposed}. Et {EC2 Image Builder} ne fait pas que des {AMI} : avec une {container recipe}, il produit des images de conteneurs durcies et les pousse dans {ECR}.
+@slide quiz QUESTION
+Des tâches ECS d'un compte de production doivent tirer des images d'un dépôt ECR d'un compte outils. Que faut-il ?
+> **Repository policy** sur le dépôt ECR (autorise le compte prod) + **ecr:GetAuthorizationToken** sur le rôle qui tire.
+@end
+L: Question. Des tâches {ECS} en production tirent des images d'un dépôt {ECR} d'un autre compte. Que faut-il ?
+[pause 5]
+@answer
+R: Une {repository policy} sur le dépôt, qui autorise le compte de production, et le droit {ecr GetAuthorizationToken} côté production.

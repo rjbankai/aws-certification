@@ -1,95 +1,278 @@
 # Épisode 6 — Security et Compliance (17 %)
-L: Épisode six. Security et Compliance, dix-sept pour cent de l'examen.
+@slide title Security et Compliance
+Épisode 6 · Domaine 6
+17 % de l'examen
+@end
+L: Épisode six. {Security} et {Compliance}, dix-sept pour cent de l'examen.
+@slide flow L'angle des questions
+Détecter :: quel service voit le problème ?
+Empêcher :: quel mécanisme le bloque ?
+Automatiser :: remédier sur tous les comptes
+@end
+@all
 R: Trois axes : gérer les identités et les accès à grande échelle, appliquer des contrôles de sécurité automatisés et protéger les données, et surveiller et auditer. L'angle : quel service détecte le problème, quel mécanisme l'empêche, et comment on automatise la remédiation sur tous les comptes.
-L: On commence par la logique d'évaluation IAM. À connaître par cœur.
-R: Trois étapes. Un : un Deny explicite n'importe où, et c'est refusé. Toujours. Deux : sinon, l'action doit être autorisée par chaque couche qui s'applique. La SCP et la RCP de l'organisation, ET la permission boundary si elle existe, ET la session policy si elle existe, ET une identity policy ou une resource policy. Trois : si rien ne l'autorise, c'est un deny implicite.
+@slide flow Évaluation d'une requête IAM
+Deny explicite ? :: → refusé, toujours
+SCP / RCP :: autorise ?
+Permission boundary :: si présente
+Session policy :: si présente
+Identity OU resource policy :: autorise ?
+!Sinon :: deny implicite
+@end
+L: On commence par la logique d'évaluation {IAM}. À connaître par cœur.
+@+
+R: Trois étapes. Un : un {Deny} explicite n'importe où, et c'est refusé. Toujours.
+@+4
+R: Deux : sinon, l'action doit être autorisée par chaque couche qui s'applique. La {SCP} et la {RCP} de l'organisation, ET la {permission boundary} si elle existe, ET la {session policy} si elle existe, ET une {identity policy} ou une {resource policy}.
+@+
+R: Trois : si rien ne l'autorise, c'est un {deny} implicite.
+@slide cards Accorder ou plafonner ?
+Accordent des droits :: **Identity policy** · **Resource policy** (bucket policy, key policy…)
+Plafonnent seulement :: **Permission boundary** · **SCP** · **RCP** · **Session policy** → n'accordent **rien**
+@end
 L: Quels mécanismes accordent vraiment des droits ?
-R: Seulement deux : l'identity policy, et la resource policy, par exemple une bucket policy ou une key policy. Tous les autres sont des plafonds qui n'accordent rien : la permission boundary, la SCP, la RCP et la session policy.
-L: Question. Une SCP autorise s3 étoile. L'utilisateur n'a aucune politique IAM. Peut-il lire le bucket ?
+@all
+R: Seulement deux : l'{identity policy}, et la {resource policy}, par exemple une {bucket policy} ou une {key policy}. Tous les autres sont des plafonds qui n'accordent rien : la {permission boundary}, la {SCP}, la {RCP} et la {session policy}.
+@slide quiz QUESTION
+Une SCP autorise s3:*. L'utilisateur n'a aucune politique IAM. Peut-il lire le bucket ?
+> **Non.** Une SCP n'accorde rien : sans identity ni resource policy, deny implicite.
+@end
+L: Question. Une {SCP} autorise {s3 star}. L'utilisateur n'a aucune politique {IAM}. Peut-il lire le bucket ?
 [pause 4]
-R: Non. Une SCP n'accorde rien, elle plafonne. Sans identity policy ni resource policy qui autorise, c'est un deny implicite.
-L: Le pattern de délégation avec les permission boundaries ?
-R: On autorise les développeurs à créer des rôles, mais seulement avec la condition iam Permissions Boundary égale à l'ARN d'une boundary définie. Ils ne peuvent donc jamais se donner plus que la boundary. C'est la réponse à : laisser les devs créer des rôles sans escalade de privilèges.
+@answer
+R: Non. Une {SCP} n'accorde rien, elle plafonne. Sans {identity policy} ni {resource policy} qui autorise, c'est un {deny} implicite.
+@slide bullets IAM à grande échelle
+Délégation : créer des rôles **seulement si** iam:PermissionsBoundary = la boundary approuvée
+Cross-compte : rôle + **trust policy** + sts:AssumeRole · KMS : **key policy** · S3 : **bucket policy** (+ key policy si SSE-KMS)
+Conditions : aws:PrincipalOrgID · aws:SourceVpce · aws:SecureTransport · aws:MultiFactorAuthPresent · tags (ABAC)
+Identity Center (permission sets) · rôles plutôt que clés · IAM Roles Anywhere (on-prem)
+**Access Analyzer** : accès externes, accès inutilisés, validation, **génération de policy** depuis CloudTrail
+@end
+L: Le pattern de délégation avec les {permission boundaries} ?
+@+
+R: On autorise les développeurs à créer des rôles, mais seulement avec la condition {iam Permissions Boundary} égale à l'{ARN} d'une {boundary} définie. Ils ne peuvent donc jamais se donner plus que la {boundary}. C'est la réponse à : laisser les devs créer des rôles sans escalade de privilèges.
 L: Le cross-compte ?
-R: Un rôle dans le compte cible, avec une trust policy, et sts Assume Role côté appelant. Pour KMS : la key policy, plus une politique IAM côté appelant. Pour S3 : la bucket policy, plus la key policy si le bucket est chiffré en SSE-KMS.
+@+
+R: Un rôle dans le compte cible, avec une {trust policy}, et {sts Assume Role} côté appelant. Pour {KMS} : la {key policy}, plus une politique {IAM} côté appelant. Pour {S3} : la {bucket policy}, plus la {key policy} si le bucket est chiffré en {SSE-KMS}.
 L: Les conditions à reconnaître ?
-R: aws Principal Org ID, pour restreindre à mon organisation. aws Source Vpce ou Source Vpc, pour n'autoriser l'accès que via un VPC endpoint. aws Secure Transport pour imposer HTTPS. aws Multi Factor Auth Present pour le MFA. aws Requested Region. Et les tags du principal et de la ressource, pour l'ABAC.
+@+
+R: {aws Principal Org ID}, pour restreindre à mon organisation. {aws Source Vpce} ou {Source Vpc}, pour n'autoriser l'accès que via un {VPC endpoint}. {aws Secure Transport} pour imposer {HTTPS}. {aws Multi Factor Auth Present} pour le {MFA}. {aws Requested Region}. Et les {tags} du principal et de la ressource, pour l'{ABAC}.
+@slide quiz QUESTION
+Un bucket ne doit être accessible qu'aux comptes de mon organisation.
+> Bucket policy avec la condition **aws:PrincipalOrgID**.
+@end
 L: Question. Un bucket ne doit être accessible qu'aux comptes de mon organisation.
 [pause 3]
-R: Une bucket policy avec la condition aws Principal Org ID.
-L: Et accès S3 uniquement depuis le VPC ?
+@answer
+R: Une {bucket policy} avec la condition {aws Principal Org ID}.
+@slide quiz QUESTION
+Accès S3 uniquement depuis le VPC.
+> **VPC gateway endpoint** S3 + bucket policy avec **aws:SourceVpce**.
+@end
+L: Et accès {S3} uniquement depuis le {VPC} ?
 [pause 3]
-R: Un VPC gateway endpoint pour S3, et une bucket policy avec la condition aws Source Vpce.
-L: Les autres éléments IAM ?
-R: IAM Identity Center pour le SSO multi-comptes avec des permission sets. Toujours des rôles plutôt que des clés d'accès : instance profile pour EC2, task role pour ECS, execution role pour Lambda, et IAM Roles Anywhere pour les serveurs on-premises.
-L: IAM Access Analyzer ?
-R: Il trouve les accès externes, c'est-à-dire les ressources partagées en dehors de ta zone de confiance. Les accès inutilisés : rôles, clés, permissions. Il valide les politiques. Et il génère une politique à partir de l'activité réelle dans CloudTrail. C'est la réponse au moindre privilège basé sur l'usage.
+@answer
+R: Un {VPC gateway endpoint} pour {S3}, et une {bucket policy} avec la condition {aws Source Vpce}.
+@slide bullets IAM à grande échelle
+Délégation : créer des rôles **seulement si** iam:PermissionsBoundary = la boundary approuvée
+Cross-compte : rôle + **trust policy** + sts:AssumeRole · KMS : **key policy** · S3 : **bucket policy** (+ key policy si SSE-KMS)
+Conditions : aws:PrincipalOrgID · aws:SourceVpce · aws:SecureTransport · aws:MultiFactorAuthPresent · tags (ABAC)
+Identity Center (permission sets) · rôles plutôt que clés · IAM Roles Anywhere (on-prem)
+**Access Analyzer** : accès externes, accès inutilisés, validation, **génération de policy** depuis CloudTrail
+@end
+@+3
+L: Les autres éléments {IAM} ?
+@+
+R: {IAM Identity Center} pour le {SSO} multi-comptes avec des {permission sets}. Toujours des rôles plutôt que des clés d'accès : {instance profile} pour {EC2}, {task role} pour {ECS}, {execution role} pour {Lambda}, et {IAM Roles Anywhere} pour les serveurs {on-premises}.
+L: {IAM Access Analyzer} ?
+@+
+R: Il trouve les accès externes, c'est-à-dire les ressources partagées en dehors de ta zone de confiance. Les accès inutilisés : rôles, clés, permissions. Il valide les politiques. Et il génère une politique à partir de l'activité réelle dans {CloudTrail}. C'est la réponse au moindre privilège basé sur l'usage.
+@slide table Le tri des services de sécurité
+Question | Service
+Menace, comportement anormal (minage, IP malveillante) | **GuardDuty**
+CVE, vulnérabilités (EC2, images ECR, Lambda) | **Inspector**
+Données sensibles (PII, cartes) dans S3 | **Macie**
+Vue centrale des findings + standards (CIS, PCI DSS) | **Security Hub**
+Enquête après incident, cause racine | **Detective**
+Preuves d'audit continues · rapports de conformité AWS | **Audit Manager** · **Artifact**
+WAF, Shield, security groups sur toute l'Org | **Firewall Manager**
+@end
 L: Maintenant, le grand tableau de tri des services de sécurité. On le fait en quiz ?
 R: Allez.
-L: Comportement anormal, une instance communique avec une IP de minage de crypto.
+L: Comportement anormal, une instance communique avec une {IP} de minage de crypto.
 [pause 3]
-R: GuardDuty.
-L: Des CVE et des vulnérabilités dans mes instances ou mes images de conteneurs.
+@+
+R: {GuardDuty}.
+L: Des {CVE} et des vulnérabilités dans mes instances ou mes images de conteneurs.
 [pause 3]
-R: Inspector. Pour ECR, c'est l'enhanced scanning.
-L: Des numéros de carte bancaire dans un bucket S3.
+@+
+R: {Inspector}. Pour {ECR}, c'est l'{enhanced scanning}.
+L: Des numéros de carte bancaire dans un bucket {S3}.
 [pause 3]
-R: Macie.
-L: Une vue centrale de tous les findings, avec des standards comme CIS ou PCI DSS.
+@+
+R: {Macie}.
+L: Une vue centrale de tous les {findings}, avec des standards comme {CIS} ou {PCI DSS}.
 [pause 3]
-R: Security Hub.
+@+
+R: {Security Hub}.
 L: Enquêter après un incident pour trouver la cause racine.
 [pause 3]
-R: Detective. GuardDuty trouve, Detective explique.
+@+
+R: {Detective}. {GuardDuty} trouve, {Detective} explique.
 L: Collecter des preuves en continu pour un audit.
 [pause 3]
-R: Audit Manager. Et pour télécharger les rapports de conformité d'AWS lui-même, SOC ou ISO, c'est AWS Artifact.
-L: Imposer des règles WAF et des security groups à toute l'organisation.
+@+
+R: {Audit Manager}. Et pour télécharger les rapports de conformité d'{AWS} lui-même, {SOC} ou {ISO}, c'est {AWS Artifact}.
+L: Imposer des règles {WAF} et des {security groups} à toute l'organisation.
 [pause 3]
-R: Firewall Manager.
-L: Bien. Des détails qui font la différence sur GuardDuty ?
-R: GuardDuty analyse CloudTrail, les VPC Flow Logs et les logs DNS sans que tu aies besoin de les activer. Il a des options : protection S3, EKS, Runtime Monitoring, Malware Protection pour EBS et S3, activité de connexion RDS, Lambda. En multi-comptes : un delegated administrator. Et surtout, il détecte mais ne corrige pas. Pour réagir, on passe par EventBridge.
-L: Et Security Hub ?
-R: Il a besoin d'AWS Config pour ses contrôles. Agrégation cross-région vers une région principale. Delegated admin pour l'organisation. Des automation rules pour mettre à jour ou supprimer des findings. Et des custom actions qui envoient un événement vers EventBridge pour lancer une remédiation depuis la console.
-L: La protection réseau maintenant. Security group contre NACL.
-R: Le security group est stateful, il n'a que des règles allow, et il s'applique au niveau de l'interface réseau. La NACL est stateless, elle a des règles allow et deny, et s'applique au niveau du subnet.
-L: Question. Bloquer une adresse IP malveillante précise.
+@+
+R: {Firewall Manager}.
+@slide cards GuardDuty et Security Hub
+GuardDuty :: Analyse CloudTrail, VPC Flow Logs et DNS **sans activation préalable** · S3, EKS, Runtime, Malware Protection, RDS, Lambda · **détecte, ne corrige pas** → EventBridge
+Security Hub :: **Nécessite AWS Config** · agrégation cross-région · delegated admin · automation rules · custom actions → EventBridge
+@end
+L: Bien. Des détails qui font la différence sur {GuardDuty} ?
+@+
+R: {GuardDuty} analyse {CloudTrail}, les {VPC Flow Logs} et les logs {DNS} sans que tu aies besoin de les activer. Il a des options : protection {S3}, {EKS}, {Runtime Monitoring}, {Malware Protection} pour {EBS} et {S3}, activité de connexion {RDS}, {Lambda}. En multi-comptes : un {delegated administrator}. Et surtout, il détecte mais ne corrige pas. Pour réagir, on passe par {EventBridge}.
+L: Et {Security Hub} ?
+@+
+R: Il a besoin d'{AWS Config} pour ses contrôles. Agrégation cross-région vers une région principale. {Delegated admin} pour l'organisation. Des {automation rules} pour mettre à jour ou supprimer des {findings}. Et des {custom actions} qui envoient un événement vers {EventBridge} pour lancer une remédiation depuis la console.
+@slide table Protection réseau
+Élément | À retenir
+Security group | **stateful**, allow uniquement, niveau ENI
+NACL | **stateless**, allow + **deny**, niveau subnet → bloquer une IP
+VPC endpoints | **gateway** (S3, DynamoDB, gratuits) · **interface** (PrivateLink, payants) · endpoint policies
+WAF | couche 7 : CloudFront, ALB, API Gateway · **rate-based rules**, managed rules, géo
+Shield | Standard gratuit (L3/L4) · **Advanced** : SRT + protection des surcoûts
+Network Firewall | inspection stateful, IDS / IPS, filtrage de domaines sortants
+@end
+L: La protection réseau maintenant. {Security group} contre {NACL}.
+@+2
+R: Le {security group} est {stateful}, il n'a que des règles {allow}, et il s'applique au niveau de l'interface réseau. La {NACL} est {stateless}, elle a des règles {allow} et {deny}, et s'applique au niveau du {subnet}.
+@slide quiz QUESTION
+Bloquer une adresse IP malveillante précise.
+> Une **NACL** (règle deny) — ou **WAF** si c'est du HTTP. Jamais un security group.
+@end
+L: Question. Bloquer une adresse {IP} malveillante précise.
 [pause 4]
-R: Une NACL avec une règle deny. Ou WAF si c'est du trafic HTTP. Jamais un security group, puisqu'il ne sait pas faire de deny.
-L: Les VPC endpoints ?
-R: Deux types. Gateway : uniquement pour S3 et DynamoDB, gratuits, via la table de routage. Interface : PrivateLink, pour la plupart des services, payants. Et des endpoint policies pour restreindre ce qui passe.
-L: WAF, Shield, Network Firewall ?
-R: WAF filtre en couche sept sur CloudFront, ALB, API Gateway et AppSync. Rate-based rules pour limiter une IP, des managed rule groups contre l'injection SQL et le cross-site scripting, et du blocage géographique. Shield Standard est gratuit, en couches trois et quatre. Shield Advanced ajoute une protection DDoS avancée, la Shield Response Team, et la protection contre les surcoûts dus au scaling pendant une attaque. Network Firewall fait de l'inspection stateful et de l'IDS IPS au niveau du VPC, avec du filtrage de domaines sortants.
-L: La protection des données. KMS.
-R: Les clés AWS managed, comme aws slash s3 : rotation automatique, key policy non modifiable, et non partageables en cross-compte. Les customer managed keys : key policy sous ton contrôle, rotation automatique optionnelle, trois cent soixante-cinq jours par défaut, et ce sont les seules utilisables en cross-compte.
-L: Question. Partager une clé KMS avec un autre compte.
+@answer
+R: Une {NACL} avec une règle {deny}. Ou {WAF} si c'est du trafic {HTTP}. Jamais un {security group}, puisqu'il ne sait pas faire de {deny}.
+@slide table Protection réseau
+Élément | À retenir
+Security group | **stateful**, allow uniquement, niveau ENI
+NACL | **stateless**, allow + **deny**, niveau subnet → bloquer une IP
+VPC endpoints | **gateway** (S3, DynamoDB, gratuits) · **interface** (PrivateLink, payants) · endpoint policies
+WAF | couche 7 : CloudFront, ALB, API Gateway · **rate-based rules**, managed rules, géo
+Shield | Standard gratuit (L3/L4) · **Advanced** : SRT + protection des surcoûts
+Network Firewall | inspection stateful, IDS / IPS, filtrage de domaines sortants
+@end
+@+2
+L: Les {VPC endpoints} ?
+@+
+R: Deux types. {Gateway} : uniquement pour {S3} et {DynamoDB}, gratuits, via la table de routage. {Interface} : {PrivateLink}, pour la plupart des services, payants. Et des {endpoint policies} pour restreindre ce qui passe.
+L: {WAF}, {Shield}, {Network Firewall} ?
+@+3
+R: {WAF} filtre en couche sept sur {CloudFront}, {ALB}, {API Gateway} et {AppSync}. {Rate-based rules} pour limiter une {IP}, des {managed rule groups} contre l'injection {SQL} et le {cross-site scripting}, et du blocage géographique. {Shield Standard} est gratuit, en couches trois et quatre. {Shield Advanced} ajoute une protection {DDoS} avancée, la {Shield Response Team}, et la protection contre les surcoûts dus au {scaling} pendant une attaque. {Network Firewall} fait de l'inspection {stateful} et de l'{IDS} {IPS} au niveau du {VPC}, avec du filtrage de domaines sortants.
+@slide cards KMS
+AWS managed keys :: aws/s3… rotation auto, key policy **non modifiable**, **pas de cross-compte**
+Customer managed keys :: Key policy sous contrôle, rotation optionnelle (365 j par défaut), **seules utilisables cross-compte**
+Pièges :: Matériel importé : **pas de rotation auto** · key policy = source d'autorité · grants
+Urgence :: Stopper une clé → la **désactiver** (suppression : 7 à 30 jours) · Multi-Region keys pour la DR
+@end
+L: La protection des données. {KMS}.
+@+2
+R: Les clés {AWS managed}, comme {aws slash s3} : rotation automatique, {key policy} non modifiable, et non partageables en cross-compte. Les {customer managed keys} : {key policy} sous ton contrôle, rotation automatique optionnelle, trois cent soixante-cinq jours par défaut, et ce sont les seules utilisables en cross-compte.
+@slide quiz QUESTION
+Partager une clé KMS avec un autre compte.
+> Une **customer managed key** + key policy qui autorise l'autre compte. Jamais une AWS managed key.
+@end
+L: Question. Partager une clé {KMS} avec un autre compte.
 [pause 3]
-R: Une customer managed key, avec une key policy qui autorise l'autre compte. Jamais une AWS managed key.
-L: D'autres pièges KMS ?
-R: Les clés à matériel importé n'ont pas de rotation automatique : on fait une rotation manuelle, avec une nouvelle clé et un alias. La key policy est la source d'autorité : sans elle, même un admin IAM n'a pas accès. Les grants pour des accès temporaires programmatiques. Les multi-region keys pour déchiffrer dans la région de secours sans rechiffrer.
-L: Question. Il faut arrêter immédiatement l'utilisation d'une clé KMS.
+@answer
+R: Une {customer managed key}, avec une {key policy} qui autorise l'autre compte. Jamais une {AWS managed key}.
+@slide cards KMS
+AWS managed keys :: aws/s3… rotation auto, key policy **non modifiable**, **pas de cross-compte**
+Customer managed keys :: Key policy sous contrôle, rotation optionnelle (365 j par défaut), **seules utilisables cross-compte**
+Pièges :: Matériel importé : **pas de rotation auto** · key policy = source d'autorité · grants
+Urgence :: Stopper une clé → la **désactiver** (suppression : 7 à 30 jours) · Multi-Region keys pour la DR
+@end
+@+2
+L: D'autres pièges {KMS} ?
+@+
+R: Les clés à matériel importé n'ont pas de rotation automatique : on fait une rotation manuelle, avec une nouvelle clé et un alias. La {key policy} est la source d'autorité : sans elle, même un admin {IAM} n'a pas accès. Les {grants} pour des accès temporaires programmatiques. Les {multi-region keys} pour déchiffrer dans la région de secours sans rechiffrer.
+@slide quiz QUESTION
+Il faut arrêter immédiatement l'utilisation d'une clé KMS.
+> La **désactiver**. La suppression demande 7 à 30 jours d'attente.
+@end
+L: Question. Il faut arrêter immédiatement l'utilisation d'une clé {KMS}.
 [pause 4]
+@answer
 R: La désactiver. La suppression prend entre sept et trente jours d'attente.
-L: S3 maintenant.
-R: Chiffrement par défaut en SSE-S3. SSE-KMS pour auditer l'usage de la clé dans CloudTrail et contrôler l'accès, avec les S3 Bucket Keys pour réduire le coût KMS. DSSE-KMS pour une double couche. SSE-C quand c'est le client qui fournit la clé.
-L: Forcer HTTPS sur un bucket ?
-R: Une bucket policy avec un Deny si aws Secure Transport est faux. Et pour forcer SSE-KMS : un Deny sur Put Object sans le bon en-tête. Et puis Block Public Access au niveau du compte, Object Ownership en Bucket Owner Enforced pour désactiver les ACL, Object Lock, MFA Delete et les Access Points.
-L: Les certificats ACM ?
-R: ACM renouvelle automatiquement les certificats qu'il émet, avec la validation DNS de préférence. Mais attention : les certificats importés ne sont pas renouvelés.
-L: Question. Un certificat importé dans ACM va expirer. Comment être prévenu ?
+@slide bullets S3 et certificats
+SSE-S3 par défaut · **SSE-KMS** (audit + contrôle, S3 Bucket Keys) · DSSE-KMS · SSE-C
+Forcer HTTPS : Deny si **aws:SecureTransport = false** · forcer SSE-KMS : Deny PutObject sans l'en-tête
+Block Public Access · BucketOwnerEnforced (plus d'ACL) · Object Lock · MFA Delete · Access Points
+ACM : renouvelle ses certificats · **importés : pas de renouvellement** → événements dès **45 jours**
+CloudHSM : HSM dédié, FIPS 140 niveau 3
+@end
+L: {S3} maintenant.
+@+
+R: Chiffrement par défaut en {SSE-S3}. {SSE-KMS} pour auditer l'usage de la clé dans {CloudTrail} et contrôler l'accès, avec les {S3 Bucket Keys} pour réduire le coût {KMS}. {DSSE-KMS} pour une double couche. {SSE-C} quand c'est le client qui fournit la clé.
+L: Forcer {HTTPS} sur un bucket ?
+@+2
+R: Une {bucket policy} avec un {Deny} si {aws Secure Transport} est faux. Et pour forcer {SSE-KMS} : un {Deny} sur {Put Object} sans le bon en-tête. Et puis {Block Public Access} au niveau du compte, {Object Ownership} en {Bucket Owner Enforced} pour désactiver les {ACL}, {Object Lock}, {MFA Delete} et les {Access Points}.
+L: Les certificats {ACM} ?
+@+
+R: {ACM} renouvelle automatiquement les certificats qu'il émet, avec la validation {DNS} de préférence. Mais attention : les certificats importés ne sont pas renouvelés.
+@slide quiz QUESTION
+Un certificat importé dans ACM va expirer. Comment être prévenu ?
+> Événements **EventBridge / Health** dès 45 jours avant, ou règle Config **acm-certificate-expiration-check**.
+@end
+L: Question. Un certificat importé dans {ACM} va expirer. Comment être prévenu ?
 [pause 4]
-R: Les événements EventBridge ou Health, qui commencent quarante-cinq jours avant l'expiration. Ou la règle Config acm certificate expiration check.
-L: Et CloudHSM ?
-R: Un HSM dédié, mono-locataire, FIPS cent quarante niveau trois, avec des clés sous ton contrôle exclusif.
+@answer
+R: Les événements {EventBridge} ou {Health}, qui commencent quarante-cinq jours avant l'expiration. Ou la règle {Config} {acm certificate expiration check}.
+L: Et {CloudHSM} ?
+R: Un {HSM} dédié, mono-locataire, {FIPS} cent quarante niveau trois, avec des clés sous ton contrôle exclusif.
+@slide flow Chaîne de remédiation sécurité
+Finding :: GuardDuty, Security Hub, Config
+EventBridge :: règle
+Action :: Lambda, SSM Automation, Step Functions
+SNS :: notifier
+> Preventive : SCP, RCP, boundaries, hooks CFN · Detective : Config, GuardDuty, Security Hub · Responsive : EventBridge + automatisation
+@end
 L: Dernière partie : automatiser la sécurité.
-R: La chaîne type : un finding GuardDuty, Security Hub ou Config, puis EventBridge, puis Lambda, SSM Automation ou Step Functions, qui agit, et SNS qui notifie. Et retiens les trois familles. Preventive : SCP, RCP, permission boundaries, IAM, hooks CloudFormation. Detective : Config, GuardDuty, Security Hub, Access Analyzer. Responsive : EventBridge et l'automatisation.
-L: Question. GuardDuty signale une instance EC2 compromise. Que fait l'automatisation ?
+@all
+R: La chaîne type : un {finding} {GuardDuty}, {Security Hub} ou {Config}, puis {EventBridge}, puis {Lambda}, {SSM Automation} ou {Step Functions}, qui agit, et {SNS} qui notifie. Et retiens les trois familles. {Preventive} : {SCP}, {RCP}, {permission boundaries}, {IAM}, {hooks} {CloudFormation}. {Detective} : {Config}, {GuardDuty}, {Security Hub}, {Access Analyzer}. {Responsive} : {EventBridge} et l'automatisation.
+@slide quiz QUESTION
+GuardDuty signale une instance EC2 compromise. Que fait l'automatisation ?
+> Security group **vide** (isolation) + **snapshot EBS** + sortir de l'ASG / du LB. **Ne pas terminer** (preuves).
+@end
+L: Question. {GuardDuty} signale une instance {EC2} compromise. Que fait l'automatisation ?
 [pause 5]
-R: Elle remplace le security group par un security group sans aucune règle, pour isoler l'instance. Elle prend un snapshot EBS pour la forensique. Elle retire l'instance de l'Auto Scaling group et du load balancer. Et surtout, elle ne termine pas l'instance, sinon on perd les preuves.
+@answer
+R: Elle remplace le {security group} par un {security group} sans aucune règle, pour isoler l'instance. Elle prend un {snapshot} {EBS} pour la {forensique}. Elle retire l'instance de l'{Auto Scaling group} et du {load balancer}. Et surtout, elle ne termine pas l'instance, sinon on perd les preuves.
+@slide bullets Pipeline et audit
+Pipeline : CodeGuru Reviewer (secrets, défauts) + **Inspector sur ECR** → faire échouer le build si critique
+Logs d'audit inviolables : **organization trail** → compte **log archive** dédié
+Log file validation + **Object Lock** + SCP interdisant StopLogging / DeleteTrail
+@end
 L: Et dans le pipeline ?
-R: Scanner le code et les images : CodeGuru Reviewer pour les secrets et les défauts, Inspector sur ECR, et faire échouer le build en cas de vulnérabilité critique.
+@+
+R: Scanner le code et les images : {CodeGuru Reviewer} pour les secrets et les défauts, {Inspector} sur {ECR}, et faire échouer le build en cas de vulnérabilité critique.
 L: Et les logs d'audit inviolables ?
-R: Un organization trail vers un bucket dans un compte log archive dédié, la log file validation, Object Lock, et une SCP qui interdit Stop Logging et Delete Trail.
+@+2
+R: Un {organization trail} vers un bucket dans un compte {log archive} dédié, la {log file validation}, {Object Lock}, et une {SCP} qui interdit {Stop Logging} et {Delete Trail}.
+@slide bullets À retenir
+Seules les **identity / resource policies** accordent · un **Deny explicite** gagne toujours
+GuardDuty **menaces** · Inspector **CVE** · Macie **données** · Security Hub **agrège** · Detective **enquête**
+Instance compromise : **SG vide + snapshot**, ne jamais la terminer
+@end
 L: Résumé en trois phrases.
-R: Un : seules les identity et resource policies accordent des droits, et un Deny explicite gagne toujours. Deux : le tri, GuardDuty pour les menaces, Inspector pour les CVE, Macie pour les données sensibles, Security Hub pour agréger, Detective pour enquêter. Trois : instance compromise, on isole avec un security group vide, on fait un snapshot, et on ne termine jamais.
+@+
+R: Un : seules les {identity} et {resource policies} accordent des droits, et un {Deny} explicite gagne toujours.
+@+
+R: Deux : le tri, {GuardDuty} pour les menaces, {Inspector} pour les {CVE}, {Macie} pour les données sensibles, {Security Hub} pour agréger, {Detective} pour enquêter.
+@+
+R: Trois : instance compromise, on isole avec un {security group} vide, on fait un {snapshot}, et on ne termine jamais.
 L: Dernier épisode : le quiz éclair, pour la veille de l'examen. À tout de suite.

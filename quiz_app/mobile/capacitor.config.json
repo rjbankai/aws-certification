@@ -1,0 +1,10 @@
+{
+  "appId": "local.dopc02.revision",
+  "appName": "DOP-C02",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": true
+  }
+}

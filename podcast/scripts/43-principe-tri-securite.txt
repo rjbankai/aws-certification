@@ -1,0 +1,67 @@
+# Principe — Le tri des services de sécurité, en schémas
+@slide title Qui détecte quoi ?
+Principe en schémas · Domaine 6
+GuardDuty, Inspector, Macie, Access Analyzer, Security Hub, Detective
+@end
+L: Les services de sécurité. Six noms qui se ressemblent, Rémy. Comment les ranger ?
+R: Chacun répond à une seule question. Et la plupart remontent leurs résultats au même endroit : {Security Hub}.
+@slide diagram Six services, six questions
+node gd 1 2 23 28 | GuardDuty | menace : minage, IP malveillante | 🛡️ | prev
+node insp 26 2 23 28 | Inspector | CVE : EC2, images ECR, Lambda | 🔬 | detect
+node mac 51 2 23 28 | Macie | données sensibles dans S3 | 🔒 | ou
+node aa 76 2 23 28 | Access Analyzer | accès depuis l'extérieur | 🚪 | service
+node hub 30 42 40 24 | Security Hub | agrège + standards CIS, FSBP, PCI | 🧭 | org
+node det 1 76 30 22 | Detective | enquête, cause racine | 🕵️ | account
+node eb 69 76 30 22 | EventBridge | remédiation automatique | ⚡ | proactive
+arrow h1 gd hub | | | prev
+arrow h2 insp hub | | | detect
+arrow h3 mac hub | | | ou
+arrow h4 aa hub | | | service
+arrow h5 hub eb | findings | | proactive
+arrow h6 gd det | enquêter | dashed | account
+@end
+@show gd
+@focus gd
+L: On les prend un par un.
+R: {GuardDuty} : un comportement anormal. Une instance qui parle à un serveur de minage, des appels d'{API} inhabituels. Il analyse les {Flow Logs}, le {DNS} et {CloudTrail}, sans rien activer.
+@show insp
+@focus insp
+R: {Inspector} : les vulnérabilités connues, les {CVE}, dans les instances {EC2}, les images {ECR} et les {Lambdas}. En continu.
+@show mac
+@focus mac
+R: {Macie} : des données sensibles dans {S3}, comme des numéros de carte ou des données personnelles.
+@show aa
+@focus aa
+R: {IAM Access Analyzer} : quelles ressources sont accessibles depuis l'extérieur de mon organisation. Et il génère des politiques de moindre privilège à partir de l'activité réelle.
+@show hub h1 h2 h3 h4
+@focus hub h1 h2 h3 h4 gd insp mac aa
+@flow h1 h2 h3 h4
+R: Tous envoient leurs {findings} à {Security Hub}, qui agrège tous les comptes et toutes les régions, et vérifie des standards comme {CIS} ou {PCI DSS}. Il a besoin d'{AWS Config} pour ses contrôles.
+@show eb h5
+@focus hub h5 eb
+@flow h5
+R: Et pour corriger automatiquement : les {findings} partent vers {EventBridge}.
+@show det h6
+@focus gd h6 det
+R: Enfin, {Detective} : après l'alerte, comprendre ce qui s'est passé. {GuardDuty} trouve, {Detective} explique.
+@unfocus
+@slide table Une question, un service
+Question | Service
+Menace, comportement anormal | **GuardDuty**
+CVE, vulnérabilités logicielles | **Inspector**
+PII, cartes bancaires dans S3 | **Macie**
+Accès externe, moindre privilège | **IAM Access Analyzer**
+Vue centrale + standards (CIS, PCI) | **Security Hub**
+Enquête, cause racine | **Detective**
+@end
+@all
+L: Et {Audit Manager}, {Artifact}, {Firewall Manager} ?
+R: {Audit Manager} collecte des preuves pour un audit. {AWS Artifact} fournit les rapports de conformité d'{AWS} lui-même. {Firewall Manager} impose {WAF} et les {security groups} à toute l'organisation.
+@slide quiz QUESTION
+Bloquer en pipeline le déploiement d'une image de conteneur qui contient une CVE critique.
+> **Inspector** (enhanced scanning ECR) → faire échouer le build.
+@end
+L: Question. Une image de conteneur avec une {CVE} critique.
+[pause 4]
+@answer
+R: {Inspector}, avec le scan {ECR}.

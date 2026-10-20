@@ -1,0 +1,66 @@
+# Principe — L'accès cross-compte en schémas
+@slide title L'accès cross-compte
+Principe en schémas · Domaine 6
+Rôle assumé, trust policy, bucket policy et key policy
+@end
+L: L'accès cross-compte. Rémy, quelle est l'idée de base ?
+R: Il faut l'accord des deux côtés. Le compte qui appelle doit avoir le droit de demander, et le compte qui possède la ressource doit accepter. Voyons les deux façons de faire.
+@slide diagram Façon 1 · Assumer un rôle
+group a 1 4 40 92 | Compte A (appelant) | user
+node app 4 36 34 26 | Application | identity policy : sts:AssumeRole | 🧩 | user
+group b 46 4 53 92 | Compte B (cible) | account
+node role 49 8 22 26 | Rôle | trust policy : compte A | 🎭 | proactive
+node res 76 8 21 26 | Ressource | DynamoDB, S3… | 🗄️ | account
+node perm 49 64 48 26 | Permissions du rôle | ce que A pourra faire dans B | 📄 | data
+arrow s1 app role | AssumeRole | | user
+arrow s2 role res | identifiants temporaires | | account
+arrow s3 perm role | | dashed | data
+@end
+@show a app b role res
+L: Première façon : assumer un rôle.
+@focus app role
+R: Le compte A a besoin du droit {sts AssumeRole} dans une {identity policy}. Le compte B a besoin d'un rôle, dont la {trust policy} fait confiance au compte A. Les deux côtés.
+@show s1 s2 perm s3
+@focus app s1 role s2 res
+@flow s1 s2
+R: L'application assume le rôle, reçoit des identifiants temporaires, et agit dans le compte B avec les permissions de ce rôle.
+@unfocus
+@slide diagram Façon 2 · Resource policy (S3 + KMS)
+group a 1 4 40 92 | Compte A (appelant) | user
+node app 4 36 34 26 | Application | identity policy : s3:GetObject + kms:Decrypt | 🧩 | user
+group b 46 4 53 92 | Compte B (propriétaire) | account
+node bucket 49 8 24 26 | Bucket S3 | bucket policy : compte A | 🪣 | data
+node key 49 64 24 26 | Clé KMS | key policy : compte A | 🔐 | prev
+node aws 77 64 20 26 | Clé AWS managed | aws/s3 : partage impossible | 🚫 | #6b7a93
+arrow g1 app bucket | GetObject | | user
+arrow g2 app key | Decrypt | | prev
+@end
+@show a app b bucket g1
+@flow g1
+L: Deuxième façon : sans rôle, directement sur la ressource.
+R: Pour {S3}, une {bucket policy} dans le compte B autorise le compte A. Et le compte A garde quand même une {identity policy} qui l'autorise. Toujours les deux côtés.
+@show key g2
+@focus app g2 key
+@flow g2
+R: Si le bucket est chiffré en {SSE-KMS}, il faut aussi pouvoir déchiffrer : la {key policy} de la clé doit autoriser le compte A, plus {kms Decrypt} côté A.
+@show aws
+@focus aws
+R: Et le piège : une clé {AWS} managed, comme {aws slash s3}, ne peut pas être partagée. Sa {key policy} n'est pas modifiable. Il faut une {customer managed key}.
+@unfocus
+@slide cards Les conditions utiles
+aws:PrincipalOrgID :: N'autoriser que les comptes de mon organisation, y compris les futurs
+aws:SourceVpce :: N'autoriser l'accès que via un VPC endpoint
+aws:SecureTransport :: Imposer HTTPS (Deny si false)
+sts:ExternalId :: Protéger un rôle assumé par un tiers
+@end
+@all
+L: Et pour autoriser toute l'organisation sans lister les comptes ?
+R: La condition {aws Principal Org ID} dans la {bucket policy}. Elle couvre aussi les comptes créés plus tard.
+@slide quiz QUESTION
+Un bucket chiffré avec la clé aws/s3 doit être lu par un autre compte. Pourquoi ça échoue, et que faire ?
+> La clé **AWS managed** n'est pas partageable → rechiffrer avec une **customer managed key** dont la key policy autorise l'autre compte (+ bucket policy).
+@end
+L: Question. Un bucket chiffré avec {aws slash s3} doit être lu par un autre compte.
+[pause 5]
+@answer
+R: La clé {AWS} managed n'est pas partageable. Il faut une {customer managed key}, avec une {key policy} qui autorise l'autre compte, plus la {bucket policy}.

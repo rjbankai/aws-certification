@@ -1,0 +1,81 @@
+# Principe — RDS Multi-AZ, read replica et Aurora Global, en schémas
+@slide title Multi-AZ, read replica ou Aurora Global ?
+Principe en schémas · Domaine 3
+Haute disponibilité, lecture, ou reprise cross-région
+@end
+L: {Multi-AZ}, {read replica}, {Aurora Global Database}. On les confond tout le temps, Rémy.
+R: Parce qu'ils répliquent tous des données. Mais pas pour la même raison. Un schéma par cas, et ça devient clair.
+@slide diagram Multi-AZ : survivre à une panne
+group region 1 2 98 96 | Région eu-west-1 | account
+group az1 4 14 44 78 | AZ a | service
+node prim 7 32 38 30 | Primaire | lit et écrit | 🗄️ | data
+node down 7 32 38 30 | Primaire en panne | | 💥 | prev
+group az2 52 14 44 78 | AZ b | service
+node stby 55 32 38 30 | Standby | non lisible | 💤 | #6b7a93
+node newp 55 32 38 30 | Nouveau primaire | failover DNS : 60 à 120 s | ⚡ | data
+arrow r1 prim stby | réplication synchrone | | data
+@end
+@show region az1 prim az2 stby r1
+@flow r1
+L: Premier cas : {Multi-AZ}.
+R: Une base primaire dans une zone, et une {standby} dans une autre zone, alimentée en synchrone. La {standby} n'est pas lisible : elle attend.
+@hide prim stby r1
+@show down newp
+@focus down newp
+R: Si la zone tombe, {RDS} bascule automatiquement : le nom {DNS} pointe vers l'ancienne {standby}, qui devient primaire. Soixante à cent vingt secondes. C'est de la haute disponibilité, dans une seule région.
+@unfocus
+L: Il existe une variante ?
+R: Le {Multi-AZ DB cluster} : un {writer} et deux {standbys} lisibles, avec un {failover} en moins de trente-cinq secondes.
+@slide diagram Read replica : lire plus, changer de région
+group r1 1 2 47 96 | Région A | account
+node prim 4 12 41 26 | Primaire | | 🗄️ | data
+node rr1 4 64 41 26 | Read replica | lisible, asynchrone | 📖 | service
+group r2 52 2 47 96 | Région B | ou
+node rr2 55 38 41 28 | Read replica cross-région | promotion manuelle = reprise | 📖 | ou
+arrow a1 prim rr1 | asynchrone | | service
+arrow a2 prim rr2 | asynchrone, cross-région | | ou
+@end
+@show r1 prim rr1 a1
+@flow a1
+L: Et la {read replica} ?
+R: Une copie asynchrone, et lisible. Le but premier : décharger les lectures, comme les rapports de fin de mois.
+@show r2 rr2 a2
+@focus prim a2 rr2
+@flow a2
+R: Elle peut être dans une autre région. En cas de sinistre, on la promeut manuellement en base autonome : c'est un mécanisme de reprise, avec un peu de perte possible puisque c'est asynchrone.
+@unfocus
+@slide diagram Aurora Global Database : la reprise managée
+group ga 1 2 47 96 | Région A | account
+node w 4 30 41 32 | Cluster primaire | writer + readers | 🗄️ | data
+group gb 52 2 47 96 | Région B | ou
+node s 55 30 41 32 | Cluster secondaire | lecture seule | 📖 | service
+node sp 55 30 41 32 | Nouveau primaire | promu en moins d'une minute | ⚡ | data
+arrow g1 w s | réplication du stockage < 1 s | | data
+@end
+@show ga w gb s g1
+@flow g1
+L: Et {Aurora Global Database} ?
+R: Un cluster primaire dans une région, un cluster secondaire en lecture seule dans une autre. La réplication se fait au niveau du stockage, en moins d'une seconde.
+@hide s
+@show sp
+@focus sp
+R: En cas de sinistre, on promeut le secondaire : {RTO} de moins d'une minute, {RPO} d'environ une seconde. C'est la réponse type pour la reprise cross-région d'une base relationnelle.
+@unfocus
+@slide table En une image
+Besoin | Réponse | Lisible ? | Région
+Survivre à une panne d'AZ | **Multi-AZ** (synchrone) | standby non | même région
+Décharger les lectures | **Read replica** (asynchrone) | oui | même ou autre
+Reprise cross-région, RPO ~1 s | **Aurora Global Database** | secondaire oui | autre région
+Tempête de connexions | **RDS Proxy** | — | —
+@end
+@all
+L: Et {RDS Proxy} dans tout ça ?
+R: Il mutualise les connexions. C'est la réponse quand des milliers de {Lambdas} saturent la base, ou quand les reconnexions après un {failover} posent problème.
+@slide quiz QUESTION
+Les rapports de fin de mois ralentissent la base de production.
+> Une **read replica**, et les rapports lisent dessus.
+@end
+L: Question. Les rapports de fin de mois ralentissent la base de production.
+[pause 4]
+@answer
+R: Une {read replica}, et on envoie les rapports dessus.

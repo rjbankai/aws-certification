@@ -1,0 +1,119 @@
+# Principe — Les tests dans le pipeline, en schémas
+@slide title Les tests dans le pipeline
+Principe en schémas · Domaine 1
+Quel test à quelle étape, les builds sur pull request, et le code de sortie qui décide
+@end
+L: Les tests dans un pipeline. Rémy, qu'est-ce que l'examen attend ?
+R: Trois choses. Savoir quel type de test placer à quelle étape. Savoir lancer les tests automatiquement sur une {pull request}. Et comprendre que c'est le code de sortie d'une commande qui fait réussir ou échouer une étape.
+@slide diagram Quel test à quelle étape ?
+node src 1 4 17 22 | Source · PR | | 📥 | user
+node build 21 4 17 22 | Build | | 🔨 | service
+node tst 41 4 17 22 | Env. de test | | 🧪 | service
+node stg 61 4 17 22 | Staging | | 🎭 | ou
+node prd 81 4 18 22 | Production | | 🚀 | account
+node tpr 1 50 17 30 | Build sur PR | lint, unitaires rapides | ⚡ | proactive
+node tunit 21 50 17 30 | Unitaires | couverture de code, scan du code | ✅ | proactive
+node tint 41 50 17 30 | Intégration | acceptance, API, scénarios | 🔗 | detect
+node tload 61 50 17 30 | Charge · UI | performance, navigateur | 📈 | detect
+node tprod 81 50 18 30 | Canary · hooks | Synthetics, alarmes, rollback | 🐤 | prev
+arrow s1 src build | | | service
+arrow s2 build tst | | | service
+arrow s3 tst stg | | | service
+arrow s4 stg prd | | | service
+arrow v1 src tpr | | dashed | proactive
+arrow v2 build tunit | | dashed | proactive
+arrow v3 tst tint | | dashed | detect
+arrow v4 stg tload | | dashed | detect
+arrow v5 prd tprod | | dashed | prev
+@end
+@show src build tst stg prd s1 s2 s3 s4
+@flow s1 s2 s3 s4
+L: Voici le chemin d'un changement, de la {pull request} à la production.
+R: La règle : les tests rapides et nombreux le plus tôt possible, les tests lents et coûteux plus tard, sur un environnement proche de la production.
+@show tpr v1
+@focus src v1 tpr
+R: Sur la {pull request} : un build rapide, l'analyse du code et les tests unitaires. Le développeur a son retour en quelques minutes, avant le {merge}.
+@show tunit v2
+@focus build v2 tunit
+R: À l'étape de build : tous les tests unitaires, avec la couverture de code, et l'analyse de sécurité du code. {CodeBuild} publie les résultats dans ses {reports}.
+@show tint v3
+@focus tst v3 tint
+R: Une fois l'application déployée dans un environnement de test : les tests d'intégration et d'acceptance, qui appellent les vraies {API} et les vrais services.
+@show tload v4
+@focus stg v4 tload
+R: En {staging} : les tests de charge et de performance, et les tests d'interface. Pour la charge à grande échelle, {AWS} propose la solution {Distributed Load Testing on AWS}, qui lance les tests depuis des conteneurs {Fargate}.
+@show tprod v5
+@focus prd v5 tprod
+R: Et en production : un déploiement {canary}, des {hooks} de validation, des {canaries} {Synthetics}, et des alarmes qui déclenchent le {rollback}. Avant la production, une approbation manuelle si la question l'exige.
+@unfocus
+L: Et pour appeler un service {AWS} pendant les tests ?
+R: Une action {CodeBuild} de test, une action {invoke} {Lambda}, ou une action {Step Functions} pour orchestrer un scénario de test complet.
+@slide diagram Lancer les tests sur une pull request
+node dev 1 38 15 24 | Équipe | ouvre une PR | 👩‍💻 | user
+node pr 20 38 17 24 | Pull request | CodeCommit | 🔀 | service
+node eb 42 38 16 24 | EventBridge | événement PR | 🔔 | service
+node cb 63 38 16 24 | CodeBuild | tests + couverture | 🔨 | proactive
+node res 84 38 15 24 | Résultat | commentaire, vote | 💬 | data
+node gh 42 4 16 22 | GitHub | webhook vers CodeBuild | 🐙 | ou
+node rep 63 76 16 22 | Reports | tests et couverture | 📊 | detect
+arrow a1 dev pr | | | user
+arrow a2 pr eb | | | service
+arrow a3 eb cb | | | service
+arrow a4 cb res | | | data
+arrow a5 cb rep | | dashed | detect
+arrow g1 pr gh | | dashed | ou
+arrow g2 gh cb | | dashed | ou
+@end
+@show dev pr a1 eb a2 cb a3
+@flow a1 a2 a3
+L: Comment lancer les tests automatiquement sur une {pull request} ?
+R: Avec {CodeCommit}, la création ou la mise à jour d'une {pull request} émet un événement. Une règle {EventBridge} lance un build {CodeBuild} sur la branche source.
+@show res a4
+@focus cb a4 res
+@flow a4
+R: Le résultat est renvoyé sur la {pull request}, en commentaire, et peut compter comme un vote d'approbation exigé par une {approval rule}.
+@show gh g1 g2
+@focus pr g1 gh g2 cb
+@flow g1 g2
+R: Avec {GitHub} ou {Bitbucket}, c'est encore plus direct : un {webhook} {CodeBuild} filtré sur les événements de {pull request}.
+@show rep a5
+@focus cb a5 rep
+R: Les {reports} {CodeBuild} affichent les tests au format {JUnit}, {NUnit} ou {Cucumber}, et la couverture de code au format {JaCoCo}, {Cobertura}, {Clover}, {SimpleCov} ou {LCOV}.
+@unfocus
+@slide diagram Le code de sortie décide
+node cmd 1 38 18 24 | Commande | npm test, pytest… | ⌨️ | service
+node ok 26 4 21 24 | Code de sortie 0 | la phase réussit | ✅ | data
+node ko 26 72 21 24 | Code ≠ 0 | la phase échoue | ❌ | prev
+node next 53 4 20 24 | Phase suivante | | ➡️ | data
+node fail 53 72 20 24 | Build FAILED | action du pipeline en échec | 🛑 | prev
+node stop 79 72 20 24 | Pipeline arrêté | rien ne part en prod | ⛔ | prev
+node vs 53 38 20 24 | ValidateService | script CodeDeploy | 🩺 | detect
+node rb 79 38 20 24 | Rollback | automatique | ↩️ | proactive
+arrow e0 cmd ok | 0 | | data
+arrow e1 cmd ko | ≠ 0 | | prev
+arrow e2 ok next | | | data
+arrow e3 ko fail | | | prev
+arrow e4 fail stop | | | prev
+arrow e5 vs rb | exit ≠ 0 | | detect
+@end
+@show cmd ok ko e0 e1
+@flow e0 e1
+L: Et comment {CodeBuild} sait qu'un test a échoué ?
+R: Par le code de sortie. Chaque commande du {buildspec} renvoie un code. Zéro : la phase réussit. Autre chose : la phase échoue.
+@show next fail stop e2 e3 e4
+@focus ko e3 fail e4 stop
+@flow e3 e4
+R: Une phase en échec fait échouer le build, donc l'action du pipeline, et rien n'avance vers la production. Le réglage {on-failure} d'une phase permet de choisir {ABORT} ou {CONTINUE}.
+@show vs rb e5
+@focus vs e5 rb
+@flow e5
+R: C'est le même principe dans {CodeDeploy} : un script de {hook}, par exemple {ValidateService}, qui sort avec un code différent de zéro fait échouer le déploiement, et déclenche le {rollback} s'il est activé.
+@unfocus
+@slide quiz QUESTION
+Lancer automatiquement les tests unitaires à chaque pull request CodeCommit, avec le moins d'effort.
+> Règle **EventBridge** sur les événements de pull request → **CodeBuild** ; résultat commenté sur la PR.
+@end
+L: Question. Tests unitaires automatiques à chaque {pull request} {CodeCommit}, avec le moins d'effort.
+[pause 4]
+@answer
+R: Une règle {EventBridge} sur l'événement de {pull request}, qui lance {CodeBuild}.

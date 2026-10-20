@@ -1,0 +1,66 @@
+# Principe — Dépanner CloudFormation, en schémas
+@slide title Dépanner une stack CloudFormation
+Principe en schémas · Domaine 5
+Les états bloquants et la sortie de chacun
+@end
+L: Le dépannage {CloudFormation}. Rémy, quels états faut-il connaître ?
+R: Ceux où la {stack} est coincée. Pour chacun, l'examen demande la sortie. On les dessine comme un parcours.
+@slide diagram Une mise à jour qui tourne mal
+node upd 1 38 19 24 | UPDATE_IN_PROGRESS | | 🔄 | service
+node rb 25 38 21 24 | UPDATE_ROLLBACK_IN_PROGRESS | échec, retour arrière | ↩️ | detect
+node rbf 52 4 22 26 | UPDATE_ROLLBACK_FAILED | ressource modifiée à la main | 🧱 | prev
+node cont 79 4 20 26 | ContinueUpdateRollback | resources-to-skip | ⏭️ | proactive
+node rbc 52 70 22 26 | UPDATE_ROLLBACK_COMPLETE | stack de nouveau utilisable | ✅ | data
+arrow t1 upd rb | échec | | detect
+arrow t2 rb rbf | rollback impossible | | prev
+arrow t3 rbf cont | | | proactive
+arrow t4 cont rbc | | | data
+arrow t5 rb rbc | rollback réussi | | data
+@end
+@show upd
+L: Une mise à jour commence.
+@show rb t1
+@flow t1
+R: Une ressource échoue : {CloudFormation} revient en arrière. C'est le {rollback}.
+@show rbc t5
+@focus rb t5 rbc
+@flow t5
+R: Normalement, le {rollback} réussit, et la {stack} revient à son état précédent.
+@show rbf t2
+@focus rb t2 rbf
+@flow t2
+R: Mais si quelqu'un a modifié ou supprimé une ressource à la main, le retour arrière lui-même échoue : {UPDATE ROLLBACK FAILED}. La {stack} est bloquée, aucune mise à jour possible.
+@show cont t3 t4
+@focus rbf t3 cont t4 rbc
+@flow t3 t4
+R: La sortie : corriger la ressource si possible, puis {Continue Update Rollback}, en indiquant les ressources à ignorer avec {resources to skip}. Supprimer la {stack} n'est jamais la meilleure réponse.
+@unfocus
+@slide diagram Les trois autres blocages
+node del 1 6 28 26 | DELETE_FAILED | bucket S3 non vide, ressource utilisée | 🗑️ | prev
+node fdel 37 6 62 26 | Vider le bucket / retirer la dépendance | ou relancer avec RetainResources | 🧹 | proactive
+node cr 1 38 28 26 | Bloquée 1 heure | custom resource muette | ⏳ | prev
+node fcr 37 38 62 26 | La Lambda doit toujours répondre | SUCCESS ou FAILED sur l'URL pré-signée | 📨 | proactive
+node cs 1 70 28 26 | CreationPolicy timeout | cfn-signal jamais reçu | 📡 | prev
+node fcs 37 70 62 26 | Script user data en erreur, réseau, nom de ressource | pour débugger : désactiver le rollback | 🔧 | proactive
+arrow a1 del fdel | | | proactive
+arrow a2 cr fcr | | | proactive
+arrow a3 cs fcs | | | proactive
+@end
+@show del fdel a1
+L: Les autres blocages ?
+R: {DELETE FAILED} : souvent un bucket {S3} qui n'est pas vide. On le vide, on retire la dépendance, ou on relance la suppression avec {Retain Resources}.
+@show cr fcr a2
+@focus cr a2 fcr
+R: Une {stack} bloquée une heure sur une {custom resource} : la {Lambda} n'a jamais répondu. Elle doit toujours envoyer {SUCCESS} ou {FAILED}, même en cas d'exception.
+@show cs fcs a3
+@focus cs a3 fcs
+R: Un {timeout} de {Creation Policy} : le {cfn signal} n'est jamais arrivé. Script {user data} en erreur, pas d'accès réseau à l'{endpoint} {CloudFormation}, ou mauvais nom de ressource. Pour débugger, on désactive le {rollback} afin de garder l'instance.
+@unfocus
+@slide quiz QUESTION
+Une stack est en UPDATE_ROLLBACK_FAILED parce qu'un security group a été supprimé à la main.
+> **ContinueUpdateRollback** en ignorant cette ressource (resources-to-skip).
+@end
+L: Question. {UPDATE ROLLBACK FAILED}, un {security group} supprimé à la main.
+[pause 4]
+@answer
+R: {Continue Update Rollback}, en ignorant la ressource.

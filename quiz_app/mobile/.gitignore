@@ -1,0 +1,8 @@
+node_modules/
+www/
+paquet/
+*.apk
+android/app/build/
+android/build/
+android/.gradle/
+android/app/src/main/assets/public/

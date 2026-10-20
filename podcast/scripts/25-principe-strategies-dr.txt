@@ -1,0 +1,91 @@
+# Principe — Les 4 stratégies de reprise en schémas
+@slide title Les 4 stratégies de reprise
+Principe en schémas · Domaine 3
+Ce qui tourne vraiment dans la région de secours
+@end
+L: Les quatre stratégies de reprise après sinistre, en schémas. La règle d'or ?
+R: La question donne un {RTO}, un {RPO} et un budget. On choisit la stratégie la moins chère qui tient les deux objectifs. Et pour choisir, il suffit de regarder ce qui tourne dans la région de secours.
+@slide diagram Backup & Restore
+group pri 1 4 47 92 | Région principale | account
+node app 4 16 41 24 | Application | EC2, ALB | 🖥️ | account
+node db 4 58 41 26 | Base de données | en service | 🗄️ | data
+group dr 52 4 47 92 | Région de secours | #6b7a93
+node bk 55 58 41 26 | Sauvegardes | snapshots copiés | 💾 | #6b7a93
+arrow c1 db bk | copie périodique | dashed | data
+@end
+@show pri app db
+L: Voici la région principale.
+@show dr bk c1
+@flow c1
+R: {Backup and Restore} : dans la région de secours, rien ne tourne. Seulement des sauvegardes copiées régulièrement.
+@focus bk c1
+R: En cas de sinistre, on restaure tout. {RPO} et {RTO} en heures. Le moins cher.
+@unfocus
+@slide diagram Pilot Light
+group pri 1 4 47 92 | Région principale | account
+node app 4 16 41 24 | Application | en service | 🖥️ | account
+node db 4 58 41 26 | Base de données | primaire | 🗄️ | data
+group dr 52 4 47 92 | Région de secours | ou
+node app2 55 16 41 24 | Application | éteinte, AMI prête | 💤 | #6b7a93
+node db2 55 58 41 26 | Base répliquée | allumée | 🔥 | data
+arrow r1 db db2 | réplication continue | | data
+@end
+@show pri app db dr app2
+L: {Pilot Light} ?
+@show db2 r1
+@focus db db2 r1
+@flow r1
+R: Les données sont chaudes : la base est répliquée en continu dans la région de secours, par exemple avec {Aurora Global Database}.
+@focus app2
+R: Mais le compute est froid. Les {AMI} et les {templates} sont prêts, on les démarre au moment du sinistre. Quelques minutes à dizaines de minutes.
+@unfocus
+@slide diagram Warm Standby
+group pri 1 4 47 92 | Région principale | account
+node app 4 16 41 24 | Application | 10 instances | 🖥️ | account
+node db 4 58 41 26 | Base de données | primaire | 🗄️ | data
+group dr 52 4 47 92 | Région de secours | ou
+node app2 55 16 41 24 | Application | 2 instances, tourne déjà | 🌡️ | detect
+node db2 55 58 41 26 | Base répliquée | allumée | 🔥 | data
+arrow r1 db db2 | réplication | | data
+@end
+@show pri app db dr db2 r1
+L: {Warm Standby} ?
+@show app2
+@focus app2
+R: Cette fois, tout tourne dans la région de secours, mais en version réduite. Deux instances au lieu de dix.
+R: Au sinistre, on bascule et on {scale}. Secondes à minutes. Le moyen mnémotechnique : en {Pilot Light}, le compute est froid ; en {Warm Standby}, tout est tiède.
+@unfocus
+@slide diagram Multi-site / Active-Active
+node users 34 2 32 20 | Utilisateurs | répartis sur 2 régions | 👥 | user
+group pri 1 30 47 68 | Région A | account
+node app 4 40 41 22 | Application | pleine capacité | 🖥️ | account
+node db 4 70 41 22 | Données | DynamoDB Global Tables | 🗄️ | data
+group dr 52 30 47 68 | Région B | account
+node app2 55 40 41 22 | Application | pleine capacité | 🖥️ | account
+node db2 55 70 41 22 | Données | actif / actif | 🗄️ | data
+arrow u1 users app | 50 % | | user
+arrow u2 users app2 | 50 % | | user
+arrow r1 db db2 | réplication bidirectionnelle | | data
+@end
+@show users pri app db dr app2 db2 u1 u2 r1
+@flow u1 u2 r1
+L: Et {Active-Active} ?
+R: Tout tourne à pleine capacité dans les deux régions, et les deux servent du trafic. {RTO} et {RPO} proches de zéro. Le plus cher. Pour les données, par exemple {DynamoDB Global Tables}.
+@slide table Choisir
+Stratégie | Région de secours | RPO / RTO | Coût
+Backup & Restore | rien, des sauvegardes | heures | €
+Pilot Light | **données** chaudes, compute froid | minutes à dizaines de min | €€
+Warm Standby | **tout**, en réduit | secondes à minutes | €€€
+Active-Active | tout, pleine capacité | ~0 | €€€€
+@end
+@all
+L: Et si l'option demande une intervention humaine pour basculer, alors que le {RTO} est court ?
+R: Elle est fausse. Et pour valider qu'une bascule marche vraiment : {Fault Injection Service}, et {Resilience Hub} pour vérifier les objectifs.
+@slide quiz QUESTION
+RTO de quelques minutes, coût maîtrisé, la région de secours n'a pas besoin de servir du trafic en temps normal.
+> **Pilot Light** (Warm Standby si elle doit déjà servir du trafic).
+@end
+L: Question. {RTO} de quelques minutes, coût maîtrisé, pas de trafic en temps normal dans la région de secours.
+[pause 4]
+@answer
+R: {Pilot Light}.

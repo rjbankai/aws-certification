@@ -1,0 +1,64 @@
+# Principe — Les 4 sorties de CloudWatch Logs en schémas
+@slide title Les 4 sorties de CloudWatch Logs
+Principe en schémas · Domaine 4
+Alerter, streamer, enquêter, archiver : quatre chemins, quatre mécanismes
+@end
+L: Les quatre sorties de {CloudWatch Logs}. Pourquoi c'est un piège ?
+R: Parce que les quatre options ont l'air de faire la même chose : sortir les logs. Mais chacune répond à un besoin précis. Une fois dessinées, on ne les confond plus.
+@slide diagram Un log group, quatre chemins
+node src 1 39 16 22 | Applications | Lambda, EC2, ECS | 🧩 | user
+node lg 21 36 17 28 | Log group | CloudWatch Logs | 📜 | service
+node mf 45 1 19 22 | Metric filter | compte un motif | 🔎 | detect
+node alarm 72 1 26 22 | Métrique → alarme | SNS, Lambda… | 🚨 | prev
+node sf 45 27 19 22 | Subscription filter | temps réel | ⚡ | proactive
+node tgt 72 27 26 22 | Kinesis · Firehose | Lambda · OpenSearch | 🌊 | data
+node li 45 53 19 22 | Logs Insights | requêtes à la main | 🧑‍💻 | service
+node ex 45 79 19 21 | Export S3 | batch, jusqu'à 12 h | 📦 | #6b7a93
+node ath 72 79 26 21 | Amazon Athena | SQL sur S3 | 🧮 | #6b7a93
+arrow in1 src lg | | | user
+arrow o1 lg mf | | | detect
+arrow o1b mf alarm | ERROR > 5 | | prev
+arrow o2 lg sf | | | proactive
+arrow o2b sf tgt | flux continu | | data
+arrow o3 lg li | | | service
+arrow o4 lg ex | | dashed | service
+arrow o4b ex ath | | dashed | service
+@end
+@show src lg in1
+@flow in1
+L: Au centre, un {log group} qui reçoit les logs de nos applications.
+@show mf alarm o1 o1b
+@focus mf alarm o1 o1b lg
+@flow o1 o1b
+R: Premier chemin : alerter sur un motif, comme {ERROR} ou un code quatre cent quatre. C'est un {metric filter}. Il compte les occurrences, en fait une métrique, et une alarme {CloudWatch} se déclenche.
+@show sf tgt o2 o2b
+@focus sf tgt o2 o2b lg
+@flow o2 o2b
+R: Deuxième chemin : envoyer les lignes de log elles-mêmes, en temps réel. C'est un {subscription filter}, vers {Kinesis Data Streams}, {Firehose}, {Lambda} ou {OpenSearch}. Jamais {SQS}, jamais {SNS}.
+@show li o3
+@focus li o3 lg
+@flow o3
+R: Troisième chemin : enquêter à la main pendant un incident. C'est {Logs Insights}, avec ses requêtes {fields}, {filter}, {stats}.
+@show ex ath o4 o4b
+@focus ex ath o4 o4b lg
+@flow o4 o4b
+R: Quatrième chemin : archiver et analyser en masse. L'export vers {S3}, puis {Athena}. Mais c'est du {batch}, avec jusqu'à douze heures de délai : jamais la réponse quand on parle de temps réel.
+@unfocus
+@slide table En une image
+Besoin | Mécanisme | Piège
+**Alerter** sur un mot-clé | Metric filter → alarme | l'alarme ne cible jamais SQS
+**Streamer** en temps réel | Subscription filter | cibles : Kinesis, Firehose, Lambda, OpenSearch
+**Enquêter** | Logs Insights | ad hoc, pas d'alerte
+**Archiver / SQL** | Export S3 + Athena | batch, jusqu'à 12 h
+@end
+@all
+L: Et la rétention ?
+R: Infinie par défaut. Il faut toujours la régler : c'est souvent la réponse aux questions de coût, avec l'archivage vers {S3} et {Glacier}.
+@slide quiz QUESTION
+Envoyer les logs applicatifs vers OpenSearch en quasi temps réel, avec le moins d'effort.
+> Un **subscription filter** sur le log group (l'export S3 est trop lent).
+@end
+L: Question. Les logs vers {OpenSearch}, en quasi temps réel.
+[pause 4]
+@answer
+R: Un {subscription filter}.

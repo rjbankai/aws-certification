@@ -1,0 +1,146 @@
+# Principe — Control Tower en schémas
+@slide title Control Tower
+Principe en schémas · Domaine 2
+Landing zone, Account Factory et les 3 familles de controls
+@end
+L: Dans cette série, on prend un principe et on le dessine. Aujourd'hui : {Control Tower}. Rémy, c'est quoi en une phrase ?
+R: Une {landing zone} clés en main : un environnement multi-comptes déjà organisé, sécurisé et journalisé, que tu obtiens sans tout construire à la main.
+@slide diagram La landing zone
+group org 1 4 98 94 | AWS Organizations | org
+node mgmt 3 13 22 21 | Compte de gestion | Control Tower, facturation | 🏛️ | org
+node ic 3 43 22 21 | IAM Identity Center | SSO, permission sets | 🔑 | service
+node af 3 73 22 21 | Account Factory | s'appuie sur Service Catalog | 🏭 | service
+group ousec 35 9 27 86 | OU Security | ou
+node log 37.5 17 22 25 | Log Archive | logs CloudTrail et Config | 🗄️ | account
+node audit 37.5 53 22 22 | Audit | équipe sécurité, accès lecture | 🔍 | account
+group ouwk 67 9 31 86 | OU Workloads | ou
+node prod 69.5 18 26 20 | Prod | compte applicatif | 📦 | account
+node dev 69.5 44 26 20 | Dev | compte applicatif | 🧪 | account
+node new 69.5 70 26 21 | Nouveau compte | créé à la demande | ✨ | account
+arrow trail mgmt log | organization trail | | org
+arrow logs prod log | logs | dashed | data
+arrow fact af new | crée | | service
+@end
+@show org
+L: Commençons par le dessin. Tout part d'{AWS Organizations}.
+@show mgmt
+@focus mgmt
+R: Au sommet, le compte de gestion. C'est lui qui héberge {Control Tower} et la facturation. On n'y fait tourner aucune application.
+@show ousec log audit
+@focus ousec log audit
+R: {Control Tower} crée ensuite une {OU} {Security} avec deux comptes dédiés. Le compte {Log Archive}, qui centralise les logs, et le compte {Audit}, réservé à l'équipe sécurité.
+@show trail
+@focus mgmt trail log
+@flow trail
+R: Un {trail} {CloudTrail} d'organisation envoie les journaux de tous les comptes vers {Log Archive}. Aucun compte membre ne peut le modifier.
+@show ouwk prod dev logs
+@focus ouwk prod dev logs log
+@flow logs
+L: Et les comptes des applications ?
+R: Ils vivent dans d'autres {OU}, par exemple {Workloads}, avec {Prod} et {Dev}. Leurs logs partent eux aussi vers {Log Archive}.
+@show ic
+@focus ic
+L: Et pour se connecter à tous ces comptes ?
+R: {IAM Identity Center}. Un seul {SSO}, et des {permission sets} qui donnent les bons droits dans chaque compte. Fini les utilisateurs {IAM} recopiés partout.
+@show af
+@focus af
+L: Et la dernière boîte, en bas à gauche ?
+R: {Account Factory}. C'est la fabrique de comptes standardisés, construite sur {Service Catalog}.
+@show new fact
+@focus af fact new
+@flow fact
+R: Une équipe demande un compte, {Account Factory} le crée directement dans la bonne {OU}, déjà conforme.
+@unfocus
+@slide diagram Un nouveau compte, de A à Z
+node req 1 37 15 26 | Demande | équipe projet | 🙋 | user
+node af 21 37 18 26 | Account Factory | Control Tower | 🏭 | service
+node acc 45 37 17 26 | Nouveau compte | OU Workloads | ✨ | account
+node ss 69 0 29 23 | StackSets | service-managed, auto-deployment | 📚 | service
+node scp 69 38 29 24 | SCP de l'OU | interdictions héritées | 🛡️ | prev
+node cfg 69 77 29 23 | Règles AWS Config | conformité constatée | 👁️ | detect
+arrow r1 req af | demande | | user
+arrow r2 af acc | crée | | service
+arrow r3 ss acc | déploie la baseline | | service
+arrow r4 scp acc | plafonne | | prev
+arrow r5 cfg acc | évalue | dashed | detect
+@end
+@show req af r1
+@flow r1
+L: Suivons un compte, du début à la fin.
+@show acc r2
+@flow r2
+R: La demande passe par {Account Factory}, qui crée le compte et le range dans l'{OU} {Workloads}.
+@show ss r3
+@focus ss r3 acc
+@flow r3
+R: Tout de suite, les {StackSets} en mode {service-managed} déploient la {baseline} : rôles, règles, alarmes. C'est l'{automatic deployment} sur l'{OU}. Rien à faire à la main.
+@show scp r4
+@focus scp r4 acc
+@flow r4
+R: Le compte hérite aussi des {SCP} de l'{OU}. Elles plafonnent ce que même un administrateur du compte peut faire.
+@show cfg r5
+@focus cfg r5 acc
+@flow r5
+R: Et des règles {AWS Config} évaluent en continu que les ressources restent conformes.
+@unfocus
+L: Et sans {Control Tower} ?
+R: On appelle {Create Account} dans {Organizations}. C'est asynchrone, donc on suit avec {Describe Create Account Status}. Puis {StackSets} {service-managed} sur l'{OU} pour la {baseline}. Même résultat, mais à assembler soi-même.
+@slide diagram Les 3 familles de controls
+node dev 1 38 15 22 | Pipeline | ou développeur | 👩‍💻 | user
+node cfn 23 38 19 22 | CloudFormation | provisionnement | 📜 | service
+node api 48 38 19 22 | Appel d'API AWS | ex. supprimer un trail | ⚡ | service
+node res 74 38 24 22 | Ressource créée | en production | 🧱 | account
+node pro 23 0 19 21 | Proactive | hook CloudFormation | 🛑 | proactive
+node pre 48 0 19 21 | Preventive | SCP · Deny | 🛡️ | prev
+node det 74 79 24 21 | Detective | règle AWS Config | 👁️ | detect
+arrow c1 dev cfn | | | user
+arrow c2 cfn api | | | service
+arrow c3 api res | | | service
+arrow k1 pro cfn | vérifie avant | dashed | proactive
+arrow k2 pre api | refuse | dashed | prev
+arrow k3 det res | constate après | dashed | detect
+@end
+@show dev cfn api res c1 c2 c3
+@flow c1 c2 c3
+L: Dernier schéma, celui qui tombe le plus à l'examen : les {controls}, ou {guardrails}.
+R: Voici le chemin d'une ressource : un {pipeline} lance {CloudFormation}, qui fait des appels d'{API}, et la ressource est créée.
+@show pro k1
+@focus pro k1 cfn
+R: Première famille, {proactive}. Ce sont des {hooks} {CloudFormation}. Ils vérifient le {template} avant le provisionnement, et bloquent s'il n'est pas conforme.
+@show pre k2
+@focus pre k2 api
+R: Deuxième famille, {preventive}. Ce sont des {SCP}. Elles refusent l'appel d'{API} lui-même, quoi qu'en disent les politiques {IAM}.
+@show det k3
+@focus det k3 res
+R: Troisième famille, {detective}. Ce sont des règles {AWS Config}. Elles ne bloquent rien : elles constatent après coup qu'une ressource n'est pas conforme.
+@unfocus
+L: Donc dans l'ordre du temps : {proactive} avant, {preventive} pendant, {detective} après.
+R: Exactement. Et les statuts à l'examen : {Enforced} pour une {preventive}, {Clear} ou {In violation} pour une {detective}.
+@slide quiz QUESTION
+Un control **detective** de Control Tower est implémenté avec quoi ?
+> Une **règle AWS Config** — preventive = SCP · proactive = hook CloudFormation.
+@end
+L: Question. Un {control} {detective}, il est implémenté avec quoi ?
+[pause 4]
+@answer
+R: Une règle {AWS Config}.
+@slide quiz QUESTION
+Tout nouveau compte de l'OU doit recevoir automatiquement les rôles et règles de sécurité.
+> **StackSets service-managed** avec **automatic deployment** sur l'OU.
+@end
+L: Tout nouveau compte d'une {OU} doit recevoir automatiquement les rôles et les règles de sécurité.
+[pause 4]
+@answer
+R: {StackSets} en mode {service-managed}, avec l'{automatic deployment} sur l'{OU}.
+@slide bullets À retenir
+Landing zone : compte de gestion + OU Security (**Log Archive**, **Audit**) + organization trail
+**Account Factory** crée les comptes · **IAM Identity Center** pour se connecter partout
+**Proactive** = hook CFN (avant) · **Preventive** = SCP (pendant) · **Detective** = Config (après)
+@end
+@+
+L: On résume.
+R: Une {landing zone}, c'est un compte de gestion, une {OU} {Security} avec {Log Archive} et {Audit}, et un {trail} d'organisation.
+@+
+R: {Account Factory} crée les comptes, {IAM Identity Center} gère les accès.
+@+
+R: Et les {controls} : {proactive} avant, {preventive} pendant, {detective} après.

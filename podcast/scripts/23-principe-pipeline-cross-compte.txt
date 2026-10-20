@@ -1,0 +1,63 @@
+# Principe — Le pipeline cross-compte en schémas
+@slide title Le pipeline cross-compte
+Principe en schémas · Domaine 1
+CMK, bucket policy et rôle : le trio, en image
+@end
+L: Le pipeline cross-compte. Pourquoi un schéma ?
+R: Parce que trois éléments doivent s'emboîter, dans deux comptes différents. Une fois qu'on a vu les flux, on ne les oublie plus.
+@slide diagram Deux comptes, un pipeline
+group tools 1 4 50 92 | Compte outils | org
+node pipe 28 8 20 22 | CodePipeline | + CodeBuild | 🔁 | service
+node bucket 28 62 20 26 | Bucket d'artefacts | chiffré | 🪣 | data
+node kms 4 8 20 22 | Clé KMS | customer managed | 🔐 | prev
+node bp 4 62 20 26 | Bucket policy | autorise le rôle cible | 📄 | detect
+group prod 56 4 43 92 | Compte production | account
+node role 59 8 37 22 | Rôle cross-compte | assumable par le pipeline | 🎭 | proactive
+node deploy 59 62 37 26 | Déploiement | CodeDeploy / CloudFormation | 🚀 | account
+arrow f1 pipe bucket | artefact | | service
+arrow f2 kms bucket | chiffre | dashed | prev
+arrow f3 pipe role | AssumeRole | | proactive
+arrow f4 role deploy | déploie | | account
+arrow f5 deploy bucket | lit l'artefact | dashed | data
+arrow f6 bp bucket | attachée | dashed | detect
+@end
+@show tools pipe bucket f1
+@flow f1
+L: On commence dans le compte outils.
+R: {CodePipeline} produit un artefact et le dépose dans le bucket d'artefacts.
+@show kms f2
+@focus kms f2 bucket
+R: Ce bucket est chiffré avec {KMS}. Et c'est le premier piège : la clé {S3} par défaut, gérée par {AWS}, ne peut pas être partagée avec un autre compte. Il faut une {customer managed key}, avec une {key policy} qui autorise le compte de production.
+@unfocus
+@show prod role f3
+@focus pipe f3 role
+@flow f3
+L: Ensuite, comment le pipeline agit dans l'autre compte ?
+R: Deuxième élément : un rôle {IAM} dans le compte de production, que le pipeline assume. On le référence sur l'action de déploiement.
+@show deploy f4
+@focus role f4 deploy
+@flow f4
+R: Avec ce rôle, le pipeline lance le déploiement en production.
+@show f5 bp f6
+@focus deploy f5 bucket bp f6
+@flow f5
+R: Mais le déploiement doit lire l'artefact, qui est dans le compte outils. Troisième élément : une {bucket policy} sur le bucket d'artefacts, qui autorise le rôle du compte de production.
+@unfocus
+L: Et si un des trois manque ?
+R: {Access Denied}. Clé {AWS} managed au lieu d'une {CMK}, bucket policy absente, ou rôle non assumable : c'est presque toujours l'un des trois.
+@slide cards Le trio, toujours les trois
+1 · CMK KMS :: Customer managed key + key policy qui autorise le compte cible. La clé S3 par défaut **ne marche pas** en cross-compte
+2 · Bucket policy :: Sur le bucket d'artefacts, autorise le rôle du compte cible à lire
+3 · Rôle IAM :: Dans le compte cible, assumable par le compte du pipeline (roleArn sur l'action)
+@end
+@all
+L: Et le cross-région, c'est pareil ?
+R: Non, c'est plus simple : un bucket d'artefacts dans chaque région, et {CodePipeline} réplique tout seul. Ne confonds pas les deux.
+@slide quiz QUESTION
+Le compte de production reçoit Access Denied en lisant l'artefact, chiffré avec la clé AWS managed de S3. Que faire ? (2 réponses)
+> Passer à une **customer managed key** partagée par key policy + une **bucket policy** pour le rôle du compte prod.
+@end
+L: Question. Le compte de production reçoit {Access Denied} en lisant l'artefact, chiffré avec la clé {AWS} managed de {S3}. Deux actions ?
+[pause 5]
+@answer
+R: Une {customer managed key}, partagée par sa {key policy}, et une {bucket policy} qui autorise le rôle du compte de production.

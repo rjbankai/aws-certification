@@ -1,0 +1,68 @@
+# Principe — StackSets en schémas
+@slide title StackSets
+Principe en schémas · Domaine 2
+Un template, N comptes, N régions — y compris les comptes futurs
+@end
+L: Les {StackSets}, en schémas. Le problème qu'ils résolvent ?
+R: Déployer le même {template} {CloudFormation} dans beaucoup de comptes et de régions, sans le faire compte par compte. Une {baseline} de sécurité, des rôles, des règles {Config}.
+@slide diagram Self-managed : tu gères les rôles
+node admin 2 38 22 24 | Compte administrateur | StackSet | 📚 | org
+node arole 2 74 22 22 | AdministrationRole | à créer toi-même | 🎭 | proactive
+node a1 62 4 36 22 | Compte 111111111111 | ExecutionRole · stack | 🏢 | account
+node a2 62 39 36 22 | Compte 222222222222 | ExecutionRole · stack | 🏢 | account
+node a3 62 74 36 22 | Compte 333333333333 | ExecutionRole · stack | 🏢 | account
+arrow d1 admin a1 | | | service
+arrow d2 admin a2 | | | service
+arrow d3 admin a3 | | | service
+arrow r1 arole admin | | dashed | proactive
+@end
+@show admin a1 a2 a3 d1 d2 d3
+@flow d1 d2 d3
+L: Premier mode : {self-managed}.
+R: Le compte administrateur pousse la {stack} dans chaque compte cible, qu'on désigne par son {ID}.
+@show arole r1
+@focus arole admin
+R: Mais c'est à toi de créer les rôles. L'{Administration Role} dans le compte administrateur…
+@focus a1 a2 a3
+R: … et l'{Execution Role} dans chaque compte cible. Un nouveau compte ? Il faut créer son rôle et l'ajouter à la main.
+@unfocus
+@slide diagram Service-managed : Organizations s'en charge
+group org 1 2 98 96 | AWS Organizations | org
+node admin 3 38 22 24 | Compte de gestion | ou delegated admin | 📚 | org
+group ou 32 8 65 86 | OU Workloads | ou
+node w1 36 20 27 22 | Compte A | stack déployée | 🏢 | account
+node w2 67 20 27 22 | Compte B | stack déployée | 🏢 | account
+node w3 36 60 27 24 | Nouveau compte | rejoint l'OU | ✨ | data
+node gone 67 60 27 24 | Compte qui sort | stack retirée | 🚪 | prev
+arrow d1 admin ou | cible l'OU | | service
+@end
+@show org admin ou w1 w2 d1
+@flow d1
+L: Et le second mode ?
+R: {Service-managed}. Intégré à {AWS Organizations}. On ne cible plus des comptes, on cible une {OU} entière. Et les rôles sont créés pour toi.
+@show w3
+@focus w3
+R: Le vrai atout, c'est l'{automatic deployment}. Un compte qui rejoint l'{OU} reçoit automatiquement la {stack}, sans rien faire.
+@show gone
+@focus gone
+R: Et un compte qui quitte l'{OU} perd la {stack}. L'{OU} décide.
+@unfocus
+L: Donc dès qu'on parle de comptes futurs ?
+R: {StackSets} {service-managed} avec {automatic deployment}. C'est le réflexe.
+@slide cards Les réglages à connaître
+Max Concurrent Count :: Combien de comptes en même temps
+Failure Tolerance Count :: Combien d'échecs avant d'arrêter
+Régions :: Déploiement séquentiel ou parallèle
+Drift detection :: Disponible au niveau du StackSet
+@end
+@all
+L: Et les réglages de déploiement ?
+R: {Max Concurrent Count} pour la parallélisation, {Failure Tolerance Count} pour s'arrêter après trop d'échecs, l'ordre des régions, et la {drift detection} au niveau du {StackSet}.
+@slide quiz QUESTION
+Déployer une baseline de sécurité dans tous les comptes d'une OU, y compris ceux créés plus tard, avec le moins d'effort.
+> **StackSets service-managed** ciblant l'OU, avec **automatic deployment**.
+@end
+L: Question. Une {baseline} dans tous les comptes d'une {OU}, y compris les futurs, avec le moins d'effort.
+[pause 4]
+@answer
+R: {StackSets} {service-managed} sur l'{OU}, avec l'{automatic deployment}.

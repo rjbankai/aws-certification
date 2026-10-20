@@ -1,0 +1,83 @@
+# Principe — EKS et stockage applicatif, en schémas
+@slide title EKS et stockage applicatif
+Principe en schémas · Domaine 1
+Déployer sur Kubernetes, et choisir entre EFS, EBS et S3
+@end
+L: Deux sujets qu'on n'avait pas encore dessinés : déployer sur {EKS}, et choisir le stockage d'une application. Rémy ?
+R: Pour {EKS}, le point clé est que {CodeDeploy} ne s'en occupe pas : on passe par les outils {Kubernetes}. Pour le stockage, tout dépend de qui doit lire les données et de ce qui survit au remplacement d'une instance.
+@slide diagram Déployer sur EKS
+node pipe 1 38 17 24 | CodePipeline | + CodeBuild | 🔁 | service
+node kc 23 38 17 24 | kubectl / Helm | lancés par CodeBuild | ⎈ | service
+node acc 23 4 17 24 | Access entry | rôle IAM → droits Kubernetes | 🎫 | proactive
+group cl 45 2 54 96 | Cluster EKS | account
+node dep 48 12 22 28 | Deployment | rolling : maxSurge, maxUnavailable | 📋 | service
+node svc 48 60 22 28 | Service | répartit vers les pods | 🔀 | service
+node pods 75 12 21 28 | Pods v2 | | 🟩 | data
+node irsa 75 60 21 28 | IRSA / Pod Identity | droits IAM des pods | 🎭 | proactive
+arrow p1 pipe kc | | | service
+arrow p2 kc dep | kubectl apply | | service
+arrow p3 acc kc | | dashed | proactive
+arrow p4 dep pods | | | data
+arrow p5 svc pods | | | service
+arrow p6 pods irsa | | dashed | proactive
+@end
+@show pipe kc p1
+@flow p1
+L: Comment on déploie sur {EKS} depuis un pipeline ?
+R: Une étape {CodeBuild} lance {kubectl} ou {Helm}. Une autre approche, le {GitOps} avec {Argo CD} ou {Flux}, fait tirer les changements par le cluster lui-même.
+@show acc p3
+@focus acc p3 kc
+R: Pour que le rôle de {CodeBuild} ait le droit d'agir dans le cluster, on l'associe à des droits {Kubernetes} : avec une {access entry} {EKS}, ou l'ancienne {ConfigMap} {aws-auth}.
+@show cl dep p2 pods p4 svc p5
+@focus dep p2 p4 pods
+@flow p2 p4
+R: Le {Deployment} remplace les pods en {rolling update}, réglé par {maxSurge} et {maxUnavailable}. Pour du {blue/green}, on fait tourner deux versions et on bascule le {Service}. Pour du {canary}, un {ingress} pondéré ou un {service mesh}.
+@show irsa p6
+@focus pods p6 irsa
+R: Et les droits {AWS} des pods : {IRSA}, les rôles {IAM} pour les {service accounts}, ou {EKS Pod Identity}. C'est l'équivalent du {task role} d'{ECS}.
+@unfocus
+L: Et le scaling ?
+R: Le {Horizontal Pod Autoscaler} pour les pods, et {Karpenter} ou le {Cluster Autoscaler} pour les nœuds. Ou {Fargate}, sans nœuds à gérer.
+@slide diagram Choisir le stockage d'une application
+group asg 1 2 40 96 | Auto Scaling group, 3 AZ | account
+node i1 4 12 34 20 | Instance 1 | | 🖥️ | account
+node i2 4 40 34 20 | Instance 2 | | 🖥️ | account
+node i3 4 68 34 20 | Instance 3 | | 🖥️ | account
+node efs 50 2 22 28 | EFS | fichiers partagés, multi-AZ | 🗂️ | data
+node ebs 50 36 22 28 | EBS | disque d'UNE instance, une AZ | 💽 | proactive
+node s3 50 70 22 28 | S3 | objets, via l'API | 🪣 | ou
+node ue 77 2 22 28 | Contenu partagé | uploads, conteneurs, Lambda | 👥 | data
+node ub 77 36 22 28 | Disque système, base sur EC2 | snapshots | 🔧 | proactive
+node us 77 70 22 28 | Statique, artefacts | sauvegardes, data lake | 🌍 | ou
+arrow f1 i1 efs | | | data
+arrow f2 i2 efs | | | data
+arrow b1 i2 ebs | | dashed | proactive
+arrow s1 i3 s3 | | | ou
+arrow u1 efs ue | | | data
+arrow u2 ebs ub | | | proactive
+arrow u3 s3 us | | | ou
+@end
+@show asg i1 i2 i3
+L: Et le stockage ? Prenons une flotte dans un {Auto Scaling group}, sur trois zones.
+@show efs f1 f2 ue u1
+@focus efs f1 f2 i1 i2 ue u1
+@flow f1 f2
+R: Si toutes les instances doivent lire et écrire les mêmes fichiers, comme des fichiers téléversés : {EFS}. Un système de fichiers partagé, multi-zones, montable aussi par des conteneurs {ECS}, {EKS}, et par {Lambda}.
+@show ebs b1 ub u2
+@focus ebs b1 i2 ub u2
+R: {EBS}, c'est le disque d'une seule instance, dans une seule zone. Parfait pour le système ou une base sur {EC2}, avec des {snapshots}. Mais il ne se partage pas, et il ne suit pas une instance remplacée dans une autre zone.
+@show s3 s1 us u3
+@focus s3 s1 i3 us u3
+@flow s1
+R: {S3}, ce sont des objets, lus et écrits par l'{API}. Pour le contenu statique, les artefacts, les sauvegardes. Très durable, et accessible de partout.
+@unfocus
+L: Et le lien avec les déploiements ?
+R: Pour faire de l'{immutable}, ou laisser un {Auto Scaling group} remplacer librement les instances, l'état ne doit pas vivre sur l'instance. On le sort vers {EFS}, {S3} ou une base comme {RDS}. Le stockage d'instance, lui, disparaît à l'arrêt.
+@slide quiz QUESTION
+Des instances d'un Auto Scaling group, sur 3 AZ, doivent toutes accéder aux mêmes fichiers téléversés par les utilisateurs.
+> **Amazon EFS** (fichiers partagés, multi-AZ). EBS est lié à une instance et une AZ.
+@end
+L: Question. Des instances sur trois zones doivent toutes accéder aux mêmes fichiers téléversés.
+[pause 4]
+@answer
+R: {Amazon EFS}.

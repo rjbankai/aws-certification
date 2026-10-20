@@ -1,1 +1,20 @@
 podcast/.cache/
+*.progress.json
+*.sessions.json
+
+# banques de questions personnelles : jamais sur GitHub
+mes_questions_no_read_sauf_moi/
+aws_certification_questions_training
+*-paquet.json
+
+# binaires mobiles (> 100 Mo, limite GitHub) : se régénèrent avec build.py
+quiz_app/mobile/*.apk
+quiz_app/mobile/*.zip
+
+# Python
+__pycache__/
+*.pyc
+
+# réglages locaux
+.claude/settings.local.json
+.obsidian/workspace.json

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DOP-C02</string>
+    <string name="title_activity_main">DOP-C02</string>
+    <string name="package_name">local.dopc02.revision</string>
+    <string name="custom_url_scheme">local.dopc02.revision</string>
+</resources>

@@ -1,0 +1,74 @@
+# Principe — Route 53 ou Global Accelerator, en schémas
+@slide title Route 53 ou Global Accelerator ?
+Principe en schémas · Domaine 3
+Bascule par DNS ou bascule réseau : pourquoi l'une prend des minutes et l'autre des secondes
+@end
+L: {Route 53} ou {Global Accelerator} : une question de secondes. Rémy ?
+R: Les deux font basculer le trafic d'une région à l'autre. Mais pas au même endroit, et c'est ce qui change tout.
+@slide diagram Failover Route 53 : le DNS
+node client 2 38 18 24 | Client | navigateur, mobile | 📱 | user
+node cache 25 4 20 22 | Cache DNS | garde la réponse (TTL) | 🧠 | detect
+node r53 25 70 20 24 | Route 53 | failover + health check | 🧭 | service
+node ra 62 8 36 24 | Région A | primaire | 🏢 | account
+node rb 62 68 36 24 | Région B | secours | 🏢 | account
+arrow q1 client r53 | quelle IP ? | | user
+arrow q2 client ra | trafic | | account
+arrow q3 client rb | trafic | | data
+arrow c1 client cache | réponse en cache | dashed | detect
+@end
+@show client r53 ra q1 q2
+@flow q1 q2
+L: Commençons par {Route 53}.
+R: Le client demande au {DNS} l'adresse du service. {Route 53}, avec une politique {failover} et un {health check}, répond : région A. Le client y envoie son trafic.
+@show cache c1
+@focus cache c1 client
+R: Mais le client garde cette réponse en cache, pendant le {TTL}.
+@show rb
+@focus rb r53
+L: Et si la région A tombe ?
+R: Le {health check} échoue, {Route 53} répond maintenant région B. Mais tant que le cache n'a pas expiré, le client continue d'aller vers A. La bascule prend des minutes, pas des secondes.
+@hide q2
+@show q3
+@focus client q3 rb
+@flow q3
+R: Le client finit par arriver sur B, une fois le cache expiré.
+@unfocus
+@slide diagram Global Accelerator : le réseau
+node client 2 38 18 24 | Client | IP fixes en dur | 📱 | user
+node ga 27 32 24 36 | Global Accelerator | 2 IP anycast statiques | 🌐 | service
+node ra 62 8 36 24 | Région A | endpoint group | 🏢 | account
+node rb 62 68 36 24 | Région B | endpoint group | 🏢 | account
+arrow g1 client ga | toujours les mêmes IP | | user
+arrow g2 ga ra | réseau AWS | | account
+arrow g3 ga rb | bascule en secondes | | data
+@end
+@show client ga ra g1 g2
+@flow g1 g2
+L: Et {Global Accelerator} ?
+R: Le client reçoit deux adresses {IP} {anycast}, fixes. Il entre sur le réseau {AWS} au point le plus proche, et {Global Accelerator} l'achemine vers la région A.
+@hide g2
+@show rb g3
+@focus ga g3 rb
+@flow g3
+R: Si la région A tombe, {Global Accelerator} bascule vers B en quelques secondes. Les {IP} ne changent pas : aucun cache {DNS} à attendre.
+@unfocus
+L: Autres avantages ?
+R: Il gère le {TCP} et l'{UDP}, pas seulement le {HTTP}. Et les {IP} fixes conviennent aux clients qui doivent les mettre en liste blanche.
+@slide table Choisir
+Besoin | Réponse
+Bascule en secondes · IP fixes · TCP / UDP | **Global Accelerator**
+Bascule DNS actif / passif, coût minimal | **Route 53 failover** + health check
+Cache HTTP, origin failover | **CloudFront** (origin groups)
+Surveiller une ressource privée | health check Route 53 sur **alarme CloudWatch**
+@end
+@all
+L: Le réflexe ?
+R: Secondes, {IP} fixes ou protocole non {HTTP} : {Global Accelerator}. Sinon, {Route 53} suffit. Et pour surveiller une ressource privée avec {Route 53}, un {health check} basé sur une alarme {CloudWatch}.
+@slide quiz QUESTION
+Un jeu en UDP doit basculer de région en moins de 30 secondes ; les pare-feux clients n'acceptent que des IP fixes.
+> **Global Accelerator**.
+@end
+L: Question. Un jeu en {UDP}, bascule en moins de trente secondes, {IP} fixes obligatoires.
+[pause 4]
+@answer
+R: {Global Accelerator}.

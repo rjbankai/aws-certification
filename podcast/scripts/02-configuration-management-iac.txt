@@ -1,95 +1,306 @@
 # Épisode 2 — Configuration Management et IaC (17 %)
-L: Épisode deux. Configuration Management et Infrastructure as Code, dix-sept pour cent de l'examen.
+@slide title Configuration Management et IaC
+Épisode 2 · Domaine 2
+17 % de l'examen
+@end
+L: Épisode deux. {Configuration Management} et {Infrastructure as Code}, dix-sept pour cent de l'examen.
+@slide cards Trois axes
+Réutiliser :: Définir de l'infrastructure réutilisable (CloudFormation, CDK, SAM)
+Multi-comptes :: Créer et sécuriser des comptes à grande échelle (Organizations, Control Tower)
+Flottes :: Automatiser des tâches complexes sur de grandes flottes (Systems Manager, Image Builder)
+@end
+@all
 R: Trois axes dans ce domaine. Un : définir de l'infrastructure réutilisable. Deux : créer et sécuriser des comptes à grande échelle. Trois : automatiser des tâches complexes sur de grandes flottes. Et l'angle des questions : comment standardiser et réutiliser, sans intervention manuelle, sur N comptes et N régions.
-L: On commence par CloudFormation et ses mécanismes de réutilisation. Il y en a beaucoup.
-R: Six à connaître. Les nested stacks : réutiliser un composant à l'intérieur d'une même stack, par exemple un load balancer standard. C'est la stack parente qui pilote la mise à jour.
+@slide table CloudFormation — réutiliser
+Mécanisme | Portée | Quand
+Nested stacks | 1 stack | composant réutilisé dans une même stack
+Export / Fn::ImportValue | même compte + **même région** | partager une valeur (ID de VPC) · bloque la suppression
+StackSets | **multi-comptes / multi-régions** | même template partout (baseline)
+Modules | blocs | ensemble de ressources conforme réutilisable
+SSM Parameter Store | 1 région | découpler producteur et consommateur
+Custom resource Lambda | **autre région** | lire une valeur dans une autre région
+@end
+L: On commence par {CloudFormation} et ses mécanismes de réutilisation. Il y en a beaucoup.
+@+
+R: Six à connaître. Les {nested stacks} : réutiliser un composant à l'intérieur d'une même {stack}, par exemple un {load balancer} standard. C'est la {stack} parente qui pilote la mise à jour.
 L: Deuxième.
-R: Les exports, avec Fn Import Value. On partage une valeur entre deux stacks qui ont des cycles de vie différents, par exemple l'ID d'un VPC. Mais seulement dans le même compte et la même région. Et attention : tant qu'un export est importé, tu ne peux ni le modifier ni le supprimer.
+@+
+R: Les exports, avec {Fn Import Value}. On partage une valeur entre deux {stacks} qui ont des cycles de vie différents, par exemple l'{ID} d'un {VPC}. Mais seulement dans le même compte et la même région. Et attention : tant qu'un export est importé, tu ne peux ni le modifier ni le supprimer.
 L: Troisième.
-R: Les StackSets : le même template déployé sur plusieurs comptes et plusieurs régions. Pour une baseline de sécurité, des rôles, des règles Config.
+@+
+R: Les {StackSets} : le même {template} déployé sur plusieurs comptes et plusieurs régions. Pour une {baseline} de sécurité, des rôles, des règles {Config}.
 L: Ensuite ?
-R: Les modules, pour encapsuler un bloc de ressources conforme et le réutiliser dans plusieurs templates. Le Parameter Store de SSM, pour découpler le producteur et le consommateur d'une valeur sans le verrou des exports. Mais attention, Parameter Store est régional : CloudFormation ne lit un paramètre que dans sa propre région.
+@+2
+R: Les modules, pour encapsuler un bloc de ressources conforme et le réutiliser dans plusieurs {templates}. Le {Parameter Store} de {SSM}, pour découpler le producteur et le consommateur d'une valeur sans le verrou des exports. Mais attention, {Parameter Store} est régional : {CloudFormation} ne lit un paramètre que dans sa propre région.
 L: Et le sixième ?
-R: La custom resource Lambda. C'est la réponse quand il faut lire une valeur dans une autre région. Ni Fn Import Value, ni resolve ssm ne traversent les régions.
-L: Question. Deux stacks dans deux régions différentes doivent partager une valeur. Que fais-tu ?
+@+
+R: La {custom resource} {Lambda}. C'est la réponse quand il faut lire une valeur dans une autre région. Ni {Fn Import Value}, ni {resolve ssm} ne traversent les régions.
+@slide quiz QUESTION
+Deux stacks dans deux régions différentes doivent partager une valeur. Que fais-tu ?
+> **Custom resource Lambda** qui lit l'autre région (ou écrire la valeur dans chaque région via StackSets).
+@end
+L: Question. Deux {stacks} dans deux régions différentes doivent partager une valeur. Que fais-tu ?
 [pause 4]
-R: Une custom resource Lambda qui va lire la valeur dans l'autre région. Ou bien écrire la valeur dans chaque région avec des StackSets.
+@answer
+R: Une {custom resource} {Lambda} qui va lire la valeur dans l'autre région. Ou bien écrire la valeur dans chaque région avec des {StackSets}.
+@slide bullets Le réflexe
+Même stack → **nested stack**
+Même compte et même région → **export** (ou SSM)
+Autre région → **custom resource Lambda**
+Même template partout → **StackSets**
+@end
 L: Résume-moi le réflexe.
-R: Même stack : nested. Même compte et même région : export, ou SSM. Autre région : custom resource Lambda. Même template partout : StackSets.
-L: Les StackSets, justement. Il y a deux modes de permissions.
-R: Self-managed : tu crées toi-même deux rôles. Le rôle d'administration dans le compte admin, et le rôle d'exécution dans chaque compte cible. Et tu cibles des comptes par leur ID.
-L: Et service-managed ?
-R: Intégré à AWS Organizations. Tu cibles des unités organisationnelles entières, des OU. Et surtout, tu peux activer l'automatic deployment : tout nouveau compte qui rejoint l'OU reçoit automatiquement la stack. Et il la perd s'il quitte l'OU.
-L: Question. Appliquer une baseline de sécurité à tous les comptes, y compris les comptes qui seront créés plus tard.
+@+
+R: Même {stack} : {nested}.
+@+
+R: Même compte et même région : export, ou {SSM}.
+@+
+R: Autre région : {custom resource} {Lambda}.
+@+
+R: Même {template} partout : {StackSets}.
+@slide cards StackSets — deux modes de permissions
+Self-managed :: Tu crées 2 rôles : **administration** (compte admin) + **execution** (comptes cibles). Ciblage par **ID de compte**
+Service-managed :: Intégré à **Organizations**, ciblage par **OU**, **automatic deployment** : tout nouveau compte de l'OU reçoit la stack
+@end
+L: Les {StackSets}, justement. Il y a deux modes de permissions.
+@+
+R: {Self-managed} : tu crées toi-même deux rôles. Le rôle d'administration dans le compte admin, et le rôle d'exécution dans chaque compte cible. Et tu cibles des comptes par leur {ID}.
+L: Et {service-managed} ?
+@+
+R: Intégré à {AWS Organizations}. Tu cibles des unités organisationnelles entières, des {OU}. Et surtout, tu peux activer l'{automatic deployment} : tout nouveau compte qui rejoint l'{OU} reçoit automatiquement la {stack}. Et il la perd s'il quitte l'{OU}.
+@slide quiz QUESTION
+Appliquer une baseline de sécurité à tous les comptes, y compris ceux créés plus tard.
+> **StackSets service-managed** + automatic deployment sur l'OU. « Comptes futurs » = ce réflexe.
+@end
+L: Question. Appliquer une {baseline} de sécurité à tous les comptes, y compris les comptes qui seront créés plus tard.
 [pause 4]
-R: StackSets en mode service-managed, avec l'automatic deployment sur l'OU. Dès que tu entends comptes futurs, c'est ça.
-L: Les réglages d'opération des StackSets ?
-R: Max Concurrent Count, Failure Tolerance Count, et le déploiement des régions en séquentiel ou en parallèle. Et la drift detection existe aussi au niveau du StackSet.
-L: Revenons aux custom resources. Le piège ?
-R: La Lambda doit renvoyer SUCCESS ou FAILED sur une URL pré-signée. Si elle ne répond pas, la stack reste bloquée jusqu'au timeout, une heure par défaut. Donc il faut toujours répondre, même en cas d'exception.
-L: Autres éléments CloudFormation ?
-R: Les macros et le Transform. Transform AWS Serverless, c'est SAM. Transform AWS Include pour inclure des extraits partagés. Le registry, pour gérer des ressources tierces, comme Datadog ou MongoDB. Les références dynamiques : resolve ssm, resolve ssm secure, resolve secretsmanager.
-L: Et pour récupérer la dernière AMI sans coder l'ID en dur ?
-R: Un paramètre de type AWS SSM Parameter Value, qui pointe vers le paramètre public d'Amazon Linux, sous le chemin slash aws slash service. Et un dernier point : le service role. CloudFormation assume un rôle dédié, donc l'utilisateur a juste besoin des droits sur CloudFormation, pas sur toutes les ressources. C'est un bon pattern de moindre privilège.
-L: Les autres outils d'IaC maintenant. Le CDK.
-R: Tu écris en TypeScript, Python, Java, et le CDK synthétise un template CloudFormation. Utile pour la logique conditionnelle complexe, et les constructs réutilisables. Et tu peux tester ton infra avec des frameworks de test classiques.
-L: SAM ?
-R: Un sur-ensemble de CloudFormation pour le serverless : fonctions, API, state machines. Sam local pour tester en local. Et Auto Publish Alias plus Deployment Preference pour le canary Lambda.
-L: OpsWorks ?
-R: Fin de vie en deux mille vingt-quatre. S'il apparaît dans une réponse, c'est presque toujours un distracteur. Préfère Systems Manager.
-L: Service Catalog ?
-R: Des produits, qui sont des templates CloudFormation, regroupés en portfolios et partagés aux utilisateurs. La pièce clé, c'est la launch constraint : un rôle IAM utilisé pour le lancement. L'utilisateur peut provisionner sans avoir lui-même les permissions sur les ressources. Et les TagOptions pour imposer le tagging.
+@answer
+R: {StackSets} en mode {service-managed}, avec l'{automatic deployment} sur l'{OU}. Dès que tu entends comptes futurs, c'est ça.
+@slide bullets CloudFormation — autres éléments
+StackSets : MaxConcurrentCount, FailureToleranceCount, régions en séquence ou en parallèle, drift detection
+Custom resource : répondre **SUCCESS / FAILED** sur l'URL pré-signée, sinon blocage (timeout 1 h)
+Transform : AWS::Serverless (SAM), AWS::Include · Registry : ressources tierces (Datadog, MongoDB)
+Dynamic references : {{resolve:ssm}}, {{resolve:ssm-secure}}, {{resolve:secretsmanager}}
+Dernière AMI : paramètre AWS::SSM::Parameter::Value · **Service role** : moindre privilège
+@end
+L: Les réglages d'opération des {StackSets} ?
+@+
+R: {Max Concurrent Count}, {Failure Tolerance Count}, et le déploiement des régions en séquentiel ou en parallèle. Et la {drift detection} existe aussi au niveau du {StackSet}.
+L: Revenons aux {custom resources}. Le piège ?
+@+
+R: La {Lambda} doit renvoyer {SUCCESS} ou {FAILED} sur une {URL} pré-signée. Si elle ne répond pas, la {stack} reste bloquée jusqu'au {timeout}, une heure par défaut. Donc il faut toujours répondre, même en cas d'exception.
+L: Autres éléments {CloudFormation} ?
+@+2
+R: Les macros et le {Transform}. {Transform AWS Serverless}, c'est {SAM}. {Transform AWS Include} pour inclure des extraits partagés. Le {registry}, pour gérer des ressources tierces, comme {Datadog} ou {MongoDB}. Les références dynamiques : {resolve ssm}, {resolve ssm secure}, {resolve secretsmanager}.
+L: Et pour récupérer la dernière {AMI} sans coder l'{ID} en dur ?
+@+
+R: Un paramètre de type {AWS SSM Parameter Value}, qui pointe vers le paramètre public d'{Amazon Linux}, sous le chemin {slash aws slash service}. Et un dernier point : le {service role}. {CloudFormation} assume un rôle dédié, donc l'utilisateur a juste besoin des droits sur {CloudFormation}, pas sur toutes les ressources. C'est un bon pattern de moindre privilège.
+@slide cards Les autres outils IaC
+CDK :: Code (TypeScript, Python, Java…) → **synthétise** un template CloudFormation. Constructs réutilisables, tests unitaires
+SAM :: Sur-ensemble CFN pour le serverless. sam local · AutoPublishAlias + DeploymentPreference
+OpsWorks :: **Fin de vie 2024** → presque toujours un **distracteur**, préférer SSM
+Service Catalog :: Portfolios de produits CFN + **launch constraint** (rôle de lancement) + TagOptions
+@end
+L: Les autres outils d'{IaC} maintenant. Le {CDK}.
+@+
+R: Tu écris en {TypeScript}, {Python}, {Java}, et le {CDK} synthétise un {template} {CloudFormation}. Utile pour la logique conditionnelle complexe, et les {constructs} réutilisables. Et tu peux tester ton infra avec des {frameworks} de test classiques.
+L: {SAM} ?
+@+
+R: Un sur-ensemble de {CloudFormation} pour le {serverless} : fonctions, {API}, {state machines}. {Sam local} pour tester en local. Et {Auto Publish Alias} plus {Deployment Preference} pour le {canary} {Lambda}.
+L: {OpsWorks} ?
+@+
+R: Fin de vie en deux mille vingt-quatre. S'il apparaît dans une réponse, c'est presque toujours un distracteur. Préfère {Systems Manager}.
+L: {Service Catalog} ?
+@+
+R: Des produits, qui sont des {templates} {CloudFormation}, regroupés en {portfolios} et partagés aux utilisateurs. La pièce clé, c'est la {launch constraint} : un rôle {IAM} utilisé pour le lancement. L'utilisateur peut provisionner sans avoir lui-même les permissions sur les ressources. Et les {TagOptions} pour imposer le {tagging}.
+@slide quiz QUESTION
+Les développeurs doivent provisionner leur propre infra, mais de façon contrôlée.
+> **Service Catalog** + **launch constraint** : self-service avec garde-fous.
+@end
 L: Question. Les développeurs doivent pouvoir provisionner leur propre infra, mais de façon contrôlée.
 [pause 4]
-R: Service Catalog avec une launch constraint. C'est la réponse type au self-service avec garde-fous.
-L: Gros sujet maintenant : Systems Manager. Quelle fonctionnalité pour quel besoin ?
-R: Je les donne une par une. Exécuter une commande ponctuelle sur une flotte : Run Command, en ciblant par tags. Maintenir un état dans le temps et corriger la dérive : State Manager, qui réapplique la config selon un planning. Patcher un parc : Patch Manager, avec des patch baselines et des patch groups définis par un tag. Une fenêtre planifiée pour les actions perturbantes : Maintenance Windows.
+@answer
+R: {Service Catalog} avec une {launch constraint}. C'est la réponse type au {self-service} avec garde-fous.
+@slide table Systems Manager — quelle feature ?
+Besoin | Feature
+Commande ponctuelle sur une flotte | **Run Command** (ciblage par tags)
+Maintenir un état, corriger la dérive | **State Manager**
+Patcher un parc | **Patch Manager** (baselines, patch groups)
+Fenêtre planifiée | **Maintenance Windows**
+Runbook multi-étapes + approbations | **Automation**
+Shell sans SSH ni bastion | **Session Manager**
+Inventaire · packages · on-prem | Inventory · Distributor · hybrid activations (mi-…)
+@end
+L: Gros sujet maintenant : {Systems Manager}. Quelle fonctionnalité pour quel besoin ?
+@+
+R: Je les donne une par une. Exécuter une commande ponctuelle sur une flotte : {Run Command}, en ciblant par {tags}.
+@+
+R: Maintenir un état dans le temps et corriger la dérive : {State Manager}, qui réapplique la config selon un planning.
+@+
+R: Patcher un parc : {Patch Manager}, avec des {patch baselines} et des {patch groups} définis par un {tag}.
+@+
+R: Une fenêtre planifiée pour les actions perturbantes : {Maintenance Windows}.
 L: Continue.
-R: Un runbook en plusieurs étapes, avec approbations : Automation. Un accès shell sans SSH, sans bastion, sans port vingt-deux : Session Manager, avec les logs vers S3 ou CloudWatch. L'inventaire logiciel : Inventory et Compliance. Déployer des packages : Distributor. Des serveurs on-premises : les hybrid activations, et les instances apparaissent avec un ID qui commence par m i. Et la configuration : Parameter Store.
-L: Question. La configuration dérive sur les instances. Run Command ou State Manager ?
+@+
+R: Un {runbook} en plusieurs étapes, avec approbations : {Automation}.
+@+
+R: Un accès {shell} sans {SSH}, sans bastion, sans port vingt-deux : {Session Manager}, avec les logs vers {S3} ou {CloudWatch}.
+@+
+R: L'inventaire logiciel : {Inventory} et {Compliance}. Déployer des packages : {Distributor}. Des serveurs {on-premises} : les {hybrid activations}, et les instances apparaissent avec un {ID} qui commence par {m i}. Et la configuration : {Parameter Store}.
+@slide quiz QUESTION
+La configuration dérive sur les instances. Run Command ou State Manager ?
+> **State Manager** : il réapplique la configuration périodiquement. Run Command est ponctuel.
+@end
+L: Question. La configuration dérive sur les instances. {Run Command} ou {State Manager} ?
 [pause 4]
-R: State Manager. Run Command est ponctuel. State Manager réapplique la configuration périodiquement.
-L: Et une instance qui n'apparaît pas dans Fleet Manager ?
-R: Toujours un de ces trois points. L'agent SSM n'est pas installé. Le rôle IAM de l'instance n'a pas la policy Amazon SSM Managed Instance Core. Ou pas de connectivité : ni NAT, ni VPC endpoints pour ssm, ssmmessages et ec2messages.
-L: Parameter Store contre Secrets Manager. On en reparlera, mais rappelle l'essentiel.
-R: Secrets Manager : rotation native, avec une Lambda gérée pour RDS, Redshift et DocumentDB. Soixante-quatre kilo-octets. Cross-compte avec une resource policy. Réplication multi-région. Payant par secret. Parameter Store : gratuit en standard, quatre kilo-octets, huit en advanced, hiérarchique, pas de rotation native, il faut la coder soi-même. Cross-compte uniquement en tier advanced, via RAM.
+@answer
+R: {State Manager}. {Run Command} est ponctuel. {State Manager} réapplique la configuration périodiquement.
+@slide flow Instance absente de Fleet Manager ?
+Agent SSM :: installé et démarré
+Rôle IAM :: AmazonSSMManagedInstanceCore
+Réseau :: NAT ou VPC endpoints ssm, ssmmessages, ec2messages
+> Toujours **l'un de ces trois points**
+@end
+L: Et une instance qui n'apparaît pas dans {Fleet Manager} ?
+@all
+R: Toujours un de ces trois points. L'agent {SSM} n'est pas installé. Le rôle {IAM} de l'instance n'a pas la {policy} {Amazon SSM Managed Instance Core}. Ou pas de connectivité : ni {NAT}, ni {VPC endpoints} pour {ssm}, {ssmmessages} et {ec2messages}.
+@slide table Parameter Store vs Secrets Manager
+Critère | Parameter Store | Secrets Manager
+Rotation | à coder soi-même | **native** (RDS, Redshift, DocumentDB)
+Taille | 4 Ko (8 Ko advanced) | 64 Ko
+Coût | gratuit (standard) | payant par secret
+Cross-compte | advanced, via RAM | resource policy
+Multi-région | non | **réplication native**
+@end
+L: {Parameter Store} contre {Secrets Manager}. On en reparlera, mais rappelle l'essentiel.
+@all
+R: {Secrets Manager} : rotation native, avec une {Lambda} gérée pour {RDS}, {Redshift} et {DocumentDB}. Soixante-quatre kilo-octets. Cross-compte avec une {resource policy}. Réplication multi-région. Payant par secret. {Parameter Store} : gratuit en standard, quatre kilo-octets, huit en {advanced}, hiérarchique, pas de rotation native, il faut la coder soi-même. Cross-compte uniquement en {tier advanced}, via {RAM}.
 L: Donc rotation automatique demandée ?
-R: Secrets Manager. Config non sensible ou budget serré : Parameter Store.
-L: Deuxième axe : le multi-comptes. AWS Organizations.
-R: Une racine, des OU, des comptes. Les SCP, les service control policies, sont des garde-fous. Point essentiel : elles plafonnent les permissions, elles n'en accordent jamais. Elles ne s'appliquent pas au compte de gestion. Et une action doit être autorisée par IAM et par la SCP.
+R: {Secrets Manager}. Config non sensible ou budget serré : {Parameter Store}.
+@slide bullets AWS Organizations
+**SCP** : garde-fous qui **plafonnent**, n'accordent jamais · pas sur le compte de gestion
+Une action doit être autorisée par **IAM ET la SCP**
+**RCP** : plafond côté ressources (S3, KMS, STS, SQS…) → data perimeter
+Tag policies · backup policies · declarative policies (IMDSv2, pas d'AMI publique)
+**Delegated administrator** : un compte membre gère StackSets, Config, Security Hub, GuardDuty…
+@end
+L: Deuxième axe : le multi-comptes. {AWS Organizations}.
+@+2
+R: Une racine, des {OU}, des comptes. Les {SCP}, les {service control policies}, sont des garde-fous. Point essentiel : elles plafonnent les permissions, elles n'en accordent jamais. Elles ne s'appliquent pas au compte de gestion. Et une action doit être autorisée par {IAM} et par la {SCP}.
+@slide quiz QUESTION
+Empêcher une action, même pour un administrateur du compte.
+> Une **SCP** : l'admin d'un compte membre ne peut pas la retirer.
+@end
 L: Question. Empêcher une action, même pour un administrateur du compte.
 [pause 3]
-R: Une SCP. Pas une politique IAM, puisqu'un admin peut modifier ses propres politiques IAM.
-L: Les RCP ?
-R: Les resource control policies. C'est le pendant des SCP côté ressources : S3, KMS, STS, SQS, Secrets Manager. Elles plafonnent ce que des principaux externes peuvent faire sur tes ressources. On parle de data perimeter.
-L: Autres politiques d'Organizations ?
-R: Les tag policies, les backup policies, et les declarative policies, par exemple pour imposer IMDS version deux ou bloquer l'accès public aux AMI et aux snapshots. Et le delegated administrator : déléguer la gestion d'un service comme StackSets, Config, Security Hub ou GuardDuty à un compte membre, au lieu d'utiliser le compte de gestion.
-L: Control Tower.
-R: Une landing zone clés en main. Multi-comptes, avec un compte log archive et un compte audit, IAM Identity Center, et un trail CloudTrail d'organisation. Account Factory pour créer des comptes standardisés, basé sur Service Catalog. Et CfCT, Customizations for Control Tower, pour appliquer tes propres templates et SCP aux nouveaux comptes.
-L: Et les controls, ou guardrails ?
-R: Trois familles. Preventive : implémentés par des SCP, ils bloquent. Detective : implémentés par des règles AWS Config, ils constatent. Proactive : des hooks CloudFormation, qui bloquent avant le provisionnement.
-L: Question. Un control detective de Control Tower, il est implémenté avec quoi ?
+@answer
+R: Une {SCP}. Pas une politique {IAM}, puisqu'un admin peut modifier ses propres politiques {IAM}.
+@slide bullets AWS Organizations
+**SCP** : garde-fous qui **plafonnent**, n'accordent jamais · pas sur le compte de gestion
+Une action doit être autorisée par **IAM ET la SCP**
+**RCP** : plafond côté ressources (S3, KMS, STS, SQS…) → data perimeter
+Tag policies · backup policies · declarative policies (IMDSv2, pas d'AMI publique)
+**Delegated administrator** : un compte membre gère StackSets, Config, Security Hub, GuardDuty…
+@end
+@+2
+L: Les {RCP} ?
+@+
+R: Les {resource control policies}. C'est le pendant des {SCP} côté ressources : {S3}, {KMS}, {STS}, {SQS}, {Secrets Manager}. Elles plafonnent ce que des principaux externes peuvent faire sur tes ressources. On parle de {data perimeter}.
+L: Autres politiques d'{Organizations} ?
+@+2
+R: Les {tag policies}, les {backup policies}, et les {declarative policies}, par exemple pour imposer {IMDS} version deux ou bloquer l'accès public aux {AMI} et aux {snapshots}. Et le {delegated administrator} : déléguer la gestion d'un service comme {StackSets}, {Config}, {Security Hub} ou {GuardDuty} à un compte membre, au lieu d'utiliser le compte de gestion.
+@slide cards Control Tower — 3 familles de controls
+Preventive :: Implémentés par des **SCP** → ils **bloquent**
+Detective :: Implémentés par des **règles AWS Config** → ils **constatent**
+Proactive :: **Hooks CloudFormation** → bloquent **avant** le provisionnement
+@end
+L: {Control Tower}.
+R: Une {landing zone} clés en main. Multi-comptes, avec un compte {log archive} et un compte {audit}, {IAM Identity Center}, et un {trail} {CloudTrail} d'organisation. {Account Factory} pour créer des comptes standardisés, basé sur {Service Catalog}. Et {CfCT}, {Customizations for Control Tower}, pour appliquer tes propres {templates} et {SCP} aux nouveaux comptes.
+L: Et les {controls}, ou {guardrails} ?
+@+
+R: Trois familles. {Preventive} : implémentés par des {SCP}, ils bloquent.
+@+
+R: {Detective} : implémentés par des règles {AWS Config}, ils constatent.
+@+
+R: {Proactive} : des {hooks} {CloudFormation}, qui bloquent avant le provisionnement.
+@slide quiz QUESTION
+Un control **detective** de Control Tower est implémenté avec quoi ?
+> Une **règle AWS Config**. (Preventive = SCP · Proactive = hook CloudFormation)
+@end
+L: Question. Un {control} {detective} de {Control Tower}, il est implémenté avec quoi ?
 [pause 3]
-R: Une règle AWS Config. Preventive, c'est SCP. Proactive, c'est un hook CloudFormation.
-L: Et sans Control Tower ?
-R: Organizations Create Account, qui est asynchrone, donc on suit avec Describe Create Account Status. Puis StackSets service-managed sur l'OU pour la baseline. Le réflexe complet pour un compte neuf : Account Factory pour créer, StackSets pour la baseline, SCP pour interdire, règles Config pour détecter.
-L: Identity Center et RAM ?
-R: IAM Identity Center : SSO multi-comptes avec des permission sets, qui remplace les rôles cross-compte manuels. RAM : partager des ressources comme des subnets, un Transit Gateway ou des licences entre comptes, au lieu de les dupliquer.
-L: Troisième axe : les flottes EC2 et les golden AMI.
-R: EC2 Image Builder. Des components, pour le build et les tests. Une recipe, qui combine une AMI de base et des components. Un pipeline, planifié ou déclenché. Et des distribution settings : copie multi-régions, partage cross-comptes, mise à jour des launch templates. C'est la réponse à : un pipeline d'AMI durcies, testées et distribuées.
-L: Launch templates ou launch configurations ?
-R: Launch templates, versionnés. Les launch configurations sont l'ancienne génération, à éviter dans les réponses.
-L: L'Auto Scaling. Trois notions qu'on confond souvent.
-R: Oui. L'instance refresh : remplacer progressivement les instances après une nouvelle AMI, avec un pourcentage minimum d'instances saines, un warmup, des checkpoints, et un rollback possible. Les lifecycle hooks : mettre une instance en attente au lancement ou à la terminaison, pour installer du logiciel ou récupérer des logs. On débloque avec Complete Lifecycle Action. Et les warm pools : des instances pré-initialisées et arrêtées, pour démarrer vite les applications longues à booter.
-L: Question. Nouvelle AMI, il faut remplacer toutes les instances sans downtime.
+@answer
+R: Une règle {AWS Config}. {Preventive}, c'est {SCP}. {Proactive}, c'est un {hook} {CloudFormation}.
+@slide flow Réflexe compte neuf
+Account Factory :: créer le compte
+StackSets service-managed :: baseline sur l'OU
+SCP :: interdire
+Règles Config :: détecter
+> Sans Control Tower : **organizations:CreateAccount** (asynchrone → DescribeCreateAccountStatus)
+@end
+L: Et sans {Control Tower} ?
+@all
+R: {Organizations Create Account}, qui est asynchrone, donc on suit avec {Describe Create Account Status}. Puis {StackSets} {service-managed} sur l'{OU} pour la {baseline}. Le réflexe complet pour un compte neuf : {Account Factory} pour créer, {StackSets} pour la {baseline}, {SCP} pour interdire, règles {Config} pour détecter.
+L: {Identity Center} et {RAM} ?
+R: {IAM Identity Center} : {SSO} multi-comptes avec des {permission sets}, qui remplace les rôles cross-compte manuels. {RAM} : partager des ressources comme des {subnets}, un {Transit Gateway} ou des licences entre comptes, au lieu de les dupliquer.
+@slide flow EC2 Image Builder — golden AMI
+Components :: build + tests
+Recipe :: AMI de base + components
+Pipeline :: planifié ou déclenché
+Distribution :: multi-régions, cross-comptes, launch templates
+> Launch **templates** (versionnés) · launch configurations = ancienne génération, à éviter
+@end
+L: Troisième axe : les flottes {EC2} et les {golden AMI}.
+@all
+R: {EC2 Image Builder}. Des {components}, pour le build et les tests. Une {recipe}, qui combine une {AMI} de base et des {components}. Un {pipeline}, planifié ou déclenché. Et des {distribution settings} : copie multi-régions, partage cross-comptes, mise à jour des {launch templates}. C'est la réponse à : un pipeline d'{AMI} durcies, testées et distribuées.
+L: {Launch templates} ou {launch configurations} ?
+R: {Launch templates}, versionnés. Les {launch configurations} sont l'ancienne génération, à éviter dans les réponses.
+@slide cards Auto Scaling — ne pas confondre
+Instance refresh :: **Remplacer toute la flotte** après une nouvelle AMI · MinHealthyPercentage, checkpoints, rollback
+Lifecycle hooks :: **Agir pendant** le lancement ou la terminaison (Pending:Wait / Terminating:Wait) · CompleteLifecycleAction
+Warm pools :: Instances pré-initialisées et arrêtées → **démarrage rapide**
+@end
+L: L'{Auto Scaling}. Trois notions qu'on confond souvent.
+@+
+R: Oui. L'{instance refresh} : remplacer progressivement les instances après une nouvelle {AMI}, avec un pourcentage minimum d'instances saines, un {warmup}, des {checkpoints}, et un {rollback} possible.
+@+
+R: Les {lifecycle hooks} : mettre une instance en attente au lancement ou à la terminaison, pour installer du logiciel ou récupérer des logs. On débloque avec {Complete Lifecycle Action}.
+@+
+R: Et les {warm pools} : des instances pré-initialisées et arrêtées, pour démarrer vite les applications longues à booter.
+@slide quiz QUESTION
+Nouvelle AMI : remplacer toutes les instances sans downtime.
+> **Instance refresh** de l'ASG (ou UpdatePolicy AutoScalingRollingUpdate si tout est en CloudFormation).
+@end
+L: Question. Nouvelle {AMI}, il faut remplacer toutes les instances sans {downtime}.
 [pause 4]
-R: Instance refresh sur l'Auto Scaling group. Ou, si tout est géré en CloudFormation, une Update Policy Auto Scaling Rolling Update.
+@answer
+R: {Instance refresh} sur l'{Auto Scaling group}. Ou, si tout est géré en {CloudFormation}, une {Update Policy} {Auto Scaling Rolling Update}.
+@slide bullets Scaling et automatisation
+Scaling : **target tracking** (défaut) · step · scheduled · predictive · mixed instances + Spot
+EventBridge (pattern ou planning) → Lambda / SSM Automation / Step Functions
+Step Functions : workflows longs, branchements, retries
+Remédiation AWS Config → action SSM Automation
+Lambda limitée à **15 min** → au-delà : Step Functions, AWS Batch, ECS Fargate
+@end
 L: Et les politiques de scaling ?
-R: Target tracking, le défaut recommandé. Step, scheduled, et predictive pour les charges cycliques. Plus une mixed instances policy avec du Spot pour réduire les coûts.
+@+
+R: {Target tracking}, le défaut recommandé. {Step}, {scheduled}, et {predictive} pour les charges cycliques. Plus une {mixed instances policy} avec du {Spot} pour réduire les coûts.
 L: Dernier point : automatiser les tâches complexes.
-R: EventBridge est le socle : une règle sur un pattern ou un planning, qui déclenche Lambda, SSM Automation ou Step Functions. Step Functions pour les workflows longs, avec branchements, retries et gestion d'erreur. SSM Automation pour les runbooks opérationnels. La remédiation AWS Config : associer une action SSM Automation à une règle non conforme.
-L: Et quand Lambda ne suffit plus ?
-R: Lambda est limitée à quinze minutes. Au-delà : Step Functions, AWS Batch, ou ECS Fargate.
+@+3
+R: {EventBridge} est le socle : une règle sur un {pattern} ou un planning, qui déclenche {Lambda}, {SSM Automation} ou {Step Functions}. {Step Functions} pour les {workflows} longs, avec branchements, {retries} et gestion d'erreur. {SSM Automation} pour les {runbooks} opérationnels. La remédiation {AWS Config} : associer une action {SSM Automation} à une règle non conforme.
+L: Et quand {Lambda} ne suffit plus ?
+@+
+R: {Lambda} est limitée à quinze minutes. Au-delà : {Step Functions}, {AWS Batch}, ou {ECS Fargate}.
+@slide bullets À retenir
+Comptes futurs → **StackSets service-managed** + automatic deployment
+SSM : Run Command **ponctuel** · State Manager **dans la durée** · Patch Manager · Session Manager au lieu de SSH
+Control Tower : preventive = **SCP** · detective = **Config** · proactive = **hook CloudFormation**
+@end
 L: Pour conclure, trois phrases à retenir.
-R: Un : comptes futurs, c'est StackSets service-managed avec automatic deployment. Deux : la carte de Systems Manager : Run Command ponctuel, State Manager dans la durée, Patch Manager pour les patchs, Session Manager à la place de SSH. Trois : Control Tower, c'est preventive égal SCP, detective égal Config, proactive égal hook CloudFormation.
-L: Prochain épisode : Resilient Cloud Solutions. À tout de suite.
+@+
+R: Un : comptes futurs, c'est {StackSets} {service-managed} avec {automatic deployment}.
+@+
+R: Deux : la carte de {Systems Manager} : {Run Command} ponctuel, {State Manager} dans la durée, {Patch Manager} pour les patchs, {Session Manager} à la place de {SSH}.
+@+
+R: Trois : {Control Tower}, c'est {preventive} égal {SCP}, {detective} égal {Config}, {proactive} égal {hook} {CloudFormation}.
+L: Prochain épisode : {Resilient Cloud Solutions}. À tout de suite.

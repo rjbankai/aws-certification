@@ -1,0 +1,57 @@
+# Principe — Partager des valeurs entre stacks, en schémas
+@slide title Partager une valeur entre stacks
+Principe en schémas · Domaine 2
+Export, SSM, nested stacks, custom resource : tout dépend de la frontière
+@end
+L: Partager une valeur entre {stacks} {CloudFormation}, par exemple l'{ID} d'un {VPC}. Plusieurs mécanismes, Rémy ?
+R: Oui, et le bon dépend de la frontière à traverser : même {stack}, même région, ou autre région.
+@slide diagram Quelle frontière ?
+group reg1 1 4 60 92 | Compte A · eu-west-1 | account
+node vpc 4 14 25 24 | Stack réseau | Outputs + Export : VpcId | 🌐 | service
+node app 33 14 25 24 | Stack appli | Fn::ImportValue | 📦 | data
+node nested 4 62 25 26 | Stack parente | nested stacks | 🧱 | ou
+node ssm 33 62 25 26 | SSM Parameter Store | /reseau/vpc-id | 🗝️ | detect
+group reg2 66 4 33 92 | us-east-1 | org
+node other 69 30 27 28 | Stack d'une autre région | custom resource Lambda | λ | proactive
+arrow e1 vpc app | export → import | | service
+arrow s1 ssm app | resolve:ssm | dashed | detect
+arrow x1 other ssm | lit dans l'autre région | dashed | proactive
+@end
+@show reg1 vpc app e1
+@flow e1
+L: Le cas le plus courant ?
+R: Une {stack} réseau exporte l'{ID} du {VPC}, et la {stack} applicative le récupère avec {Fn Import Value}. Même compte, même région.
+@focus vpc e1 app
+R: Le piège : tant qu'un export est importé, on ne peut ni le modifier ni le supprimer. Les deux {stacks} sont liées.
+@unfocus
+@show ssm s1
+@focus ssm s1 app
+@flow s1
+R: Pour découpler : écrire la valeur dans {SSM Parameter Store}, et la lire avec une référence dynamique, {resolve ssm}. Plus de verrou. Mais {Parameter Store} est régional.
+@show nested
+@focus nested
+R: Si le composant fait partie de la même {stack}, par exemple un {load balancer} standard, ce sont les {nested stacks}, pilotées par la {stack} parente.
+@show reg2 other x1
+@focus other x1 ssm
+@flow x1
+L: Et pour une autre région ?
+R: Ni l'export ni {resolve ssm} ne traversent les régions. La réponse : une {custom resource} {Lambda}, qui va lire la valeur dans l'autre région. Ou écrire la valeur dans chaque région avec des {StackSets}.
+@unfocus
+@slide table En une image
+Frontière | Mécanisme
+Même stack | **Nested stacks**
+Même compte + même région | **Export / Fn::ImportValue** (verrouille) ou **SSM** (découplé)
+Autre région | **Custom resource Lambda** (ou StackSets dans chaque région)
+Même template partout | **StackSets**
+@end
+@all
+L: Et la custom resource, un piège ?
+R: Elle doit toujours renvoyer {SUCCESS} ou {FAILED} sur l'{URL} pré-signée. Sinon, la {stack} reste bloquée jusqu'au {timeout}, une heure.
+@slide quiz QUESTION
+Une stack en eu-west-1 doit utiliser une valeur produite par une stack en us-east-1.
+> **Custom resource Lambda** qui lit l'autre région (ImportValue et resolve:ssm restent dans leur région).
+@end
+L: Question. Une valeur d'une {stack} de {us-east-1}, utilisée en {eu-west-1}.
+[pause 4]
+@answer
+R: Une {custom resource} {Lambda}.

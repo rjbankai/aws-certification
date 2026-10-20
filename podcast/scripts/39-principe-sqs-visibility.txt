@@ -1,0 +1,68 @@
+# Principe — SQS et le traitement en double, en schémas
+@slide title SQS : pourquoi un message est traité deux fois
+Principe en schémas · Domaine 3
+Visibility timeout, DLQ et idempotence
+@end
+L: {SQS}. Une question revient souvent : des messages sont traités en double. Pourquoi, Rémy ?
+R: Le {visibility timeout}. On va suivre un seul message, et tu vas voir le problème arriver.
+@slide diagram La vie d'un message
+node prod 1 38 16 24 | Producteur | | 📤 | user
+group q 21 10 26 80 | File SQS | service
+node mv 24 38 20 24 | Message | visible | ✉️ | service
+node mi 24 38 20 24 | Message | invisible : 30 s | 🙈 | #6b7a93
+node md 24 38 20 24 | Message | supprimé | ✅ | data
+node c1 55 4 24 26 | Consommateur 1 | traitement : 2 min | ⚙️ | account
+node c2 55 70 24 26 | Consommateur 2 | | ⚙️ | account
+node dlq 83 38 16 24 | DLQ | après maxReceiveCount | 🪦 | prev
+arrow s1 prod mv | SendMessage | | user
+arrow r1 mv c1 | ReceiveMessage | | account
+arrow r2 mi c2 | reçu à nouveau ! | | prev
+arrow d1 c1 md | DeleteMessage | dashed | data
+arrow x1 mv dlq | | | prev
+@end
+@show prod q mv s1
+@flow s1
+L: Le producteur envoie un message.
+@show c1 r1
+@flow r1
+R: Le consommateur un le reçoit.
+@hide mv
+@show mi
+@focus mi c1
+R: À cet instant, le message ne disparaît pas : il devient invisible, pendant le {visibility timeout}. Ici, trente secondes. Mais le traitement prend deux minutes.
+@show c2 r2
+@focus mi r2 c2
+@flow r2
+R: Au bout de trente secondes, le message redevient visible. Le consommateur deux le reçoit, alors que le premier n'a pas fini. Voilà le traitement en double.
+@unfocus
+L: La solution ?
+@hide r2 c2 mi
+@show md d1
+@focus c1 d1 md
+@flow d1
+R: Un {visibility timeout} au moins égal au temps de traitement. Le consommateur finit, appelle {Delete Message}, et le message disparaît pour de bon. Et dans tous les cas, un consommateur idempotent.
+@unfocus
+@hide md d1
+@show mv dlq x1
+@focus mv x1 dlq
+@flow x1
+L: Et un message qui échoue toujours ?
+R: Après {max receive count} réceptions sans suppression, il part dans une {dead letter queue}. Il ne bloque plus les autres, et on peut l'analyser, puis le renvoyer avec le {redrive}.
+@unfocus
+@slide cards Les réglages SQS qui tombent
+Visibility timeout :: ≥ durée de traitement, sinon **traitement en double**
+maxReceiveCount + DLQ :: Isoler les messages empoisonnés · **redrive** pour les rejouer
+Long polling :: Moins d'appels à vide (ReceiveMessageWaitTimeSeconds)
+FIFO :: Ordre et déduplication · consommateur toujours **idempotent**
+@end
+@all
+L: Les quatre réglages à connaître ?
+R: Le {visibility timeout}, le {max receive count} avec la {DLQ}, le {long polling} pour réduire les appels à vide, et {FIFO} pour l'ordre et la déduplication.
+@slide quiz QUESTION
+Traitement : jusqu'à 2 min. Visibility timeout : 30 s. Des commandes sont traitées deux fois. Première action ?
+> Augmenter le **visibility timeout** au-delà du temps de traitement maximal.
+@end
+L: Question. Traitement de deux minutes, {visibility timeout} de trente secondes, des doublons. Première action ?
+[pause 4]
+@answer
+R: Augmenter le {visibility timeout} au-delà du temps de traitement.

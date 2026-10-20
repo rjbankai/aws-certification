@@ -1,74 +1,230 @@
 # Épisode 4 — Monitoring et Logging (15 %)
-L: Épisode quatre. Monitoring et Logging, quinze pour cent de l'examen.
+@slide title Monitoring et Logging
+Épisode 4 · Domaine 4
+15 % de l'examen
+@end
+L: Épisode quatre. {Monitoring} et {Logging}, quinze pour cent de l'examen.
+@slide flow L'angle des questions
+Source de vérité :: quel service sait ?
+Détection :: métrique, filtre, alarme
+Action automatique :: EventBridge, Lambda, SSM
+@end
+@all
 R: L'angle des questions ici : quelle est la source de vérité pour cette information, et comment on la transforme en alerte, ou en action automatique.
-L: On commence par les métriques CloudWatch.
-R: Une métrique a un namespace et des dimensions. Résolution standard : une minute. Haute résolution : une seconde, uniquement pour les métriques custom, avec des alarmes à dix ou trente secondes.
-L: Le piège numéro un de CloudWatch ?
-R: Sur EC2, la mémoire, l'espace disque et les processus ne sont pas disponibles par défaut. Il faut installer l'agent CloudWatch. C'est l'agent unifié, métriques et logs, et sa configuration peut être stockée dans Parameter Store et distribuée avec SSM.
-L: Question. On veut une alarme sur l'utilisation mémoire d'une instance EC2. Que faut-il ?
+@slide bullets Métriques CloudWatch
+Namespace + dimensions · standard **1 min** · haute résolution **1 s** (custom uniquement)
+EC2 : **mémoire, disque, processus non disponibles** → **agent CloudWatch** (config dans Parameter Store, déployé via SSM)
+Métriques custom : PutMetricData ou **EMF** (JSON dans les logs, sans appel API)
+@end
+L: On commence par les métriques {CloudWatch}.
+@+
+R: Une métrique a un {namespace} et des {dimensions}. Résolution standard : une minute. Haute résolution : une seconde, uniquement pour les métriques {custom}, avec des alarmes à dix ou trente secondes.
+L: Le piège numéro un de {CloudWatch} ?
+@+
+R: Sur {EC2}, la mémoire, l'espace disque et les processus ne sont pas disponibles par défaut. Il faut installer l'agent {CloudWatch}. C'est l'agent unifié, métriques et logs, et sa configuration peut être stockée dans {Parameter Store} et distribuée avec {SSM}.
+@slide quiz QUESTION
+On veut une alarme sur l'utilisation mémoire d'une instance EC2. Que faut-il ?
+> L'**agent CloudWatch**. La mémoire n'est jamais disponible nativement.
+@end
+L: Question. On veut une alarme sur l'utilisation mémoire d'une instance {EC2}. Que faut-il ?
 [pause 3]
-R: L'agent CloudWatch. Jamais disponible nativement.
-L: Les métriques custom ?
-R: Soit l'appel Put Metric Data. Soit EMF, l'Embedded Metric Format : on écrit un JSON structuré dans les logs, et CloudWatch en extrait des métriques. Idéal pour Lambda et les conteneurs, parce qu'il n'y a pas d'appel API en plus.
+@answer
+R: L'agent {CloudWatch}. Jamais disponible nativement.
+@slide bullets Métriques CloudWatch
+Namespace + dimensions · standard **1 min** · haute résolution **1 s** (custom uniquement)
+EC2 : **mémoire, disque, processus non disponibles** → **agent CloudWatch** (config dans Parameter Store, déployé via SSM)
+Métriques custom : PutMetricData ou **EMF** (JSON dans les logs, sans appel API)
+@end
+@+2
+L: Les métriques {custom} ?
+@+
+R: Soit l'appel {Put Metric Data}. Soit {EMF}, l'{Embedded Metric Format} : on écrit un {JSON} structuré dans les logs, et {CloudWatch} en extrait des métriques. Idéal pour {Lambda} et les conteneurs, parce qu'il n'y a pas d'appel {API} en plus.
+@slide table Alarmes CloudWatch : les réglages
+Réglage | À quoi ça sert
+États | OK · ALARM · INSUFFICIENT_DATA
+EvaluationPeriods + **DatapointsToAlarm** | M points sur N → anti-flapping
+**TreatMissingData** | missing (défaut) · notBreaching · breaching · ignore
+**Composite alarm** | combiner des alarmes avec AND / OR → moins de bruit
+**Anomaly detection** | bande calculée sur l'historique → charges cycliques
+@end
 L: Les alarmes. Il y a plusieurs réglages qui tombent.
-R: Trois états : OK, ALARM, et INSUFFICIENT DATA. Evaluation Periods combiné à Datapoints To Alarm, pour dire M points sur N, ça évite le flapping. Et Treat Missing Data, qui décide comment traiter les données manquantes : missing, le défaut, not breaching, breaching, ou ignore.
-L: Question. Une alarme reste bloquée en INSUFFICIENT DATA parce que la métrique n'est publiée que quand il y a des erreurs. Que régler ?
+@+3
+R: Trois états : {OK}, {ALARM}, et {INSUFFICIENT DATA}. {Evaluation Periods} combiné à {Datapoints To Alarm}, pour dire M points sur N, ça évite le {flapping}. Et {Treat Missing Data}, qui décide comment traiter les données manquantes : {missing}, le défaut, {not breaching}, {breaching}, ou {ignore}.
+@slide quiz QUESTION
+Une alarme reste en INSUFFICIENT_DATA car la métrique n'est publiée qu'en cas d'erreur. Que régler ?
+> **TreatMissingData = notBreaching** : pas de donnée = pas d'erreur = OK.
+@end
+L: Question. Une alarme reste bloquée en {INSUFFICIENT DATA} parce que la métrique n'est publiée que quand il y a des erreurs. Que régler ?
 [pause 4]
-R: Treat Missing Data. Par exemple not breaching : pas de donnée, donc pas d'erreur, donc OK.
-L: Les composite alarms ?
+@answer
+R: {Treat Missing Data}. Par exemple {not breaching} : pas de donnée, donc pas d'erreur, donc {OK}.
+@slide table Alarmes CloudWatch : les réglages
+Réglage | À quoi ça sert
+États | OK · ALARM · INSUFFICIENT_DATA
+EvaluationPeriods + **DatapointsToAlarm** | M points sur N → anti-flapping
+**TreatMissingData** | missing (défaut) · notBreaching · breaching · ignore
+**Composite alarm** | combiner des alarmes avec AND / OR → moins de bruit
+**Anomaly detection** | bande calculée sur l'historique → charges cycliques
+@end
+@+3
+L: Les {composite alarms} ?
+@+
 R: Combiner plusieurs alarmes avec ET et OU. Par exemple, n'alerter que si l'application et la base sont dégradées en même temps. C'est la réponse à : trop d'alertes, on ne veut être réveillé que si plusieurs conditions sont réunies.
 L: Et les faux positifs pendant les pics quotidiens ?
-R: L'anomaly detection. CloudWatch calcule une bande à partir de l'historique, ce qui évite les faux positifs d'un seuil fixe sur une charge cyclique. Ou bien un réglage M sur N avec Datapoints To Alarm.
+@+
+R: L'{anomaly detection}. {CloudWatch} calcule une bande à partir de l'historique, ce qui évite les faux positifs d'un seuil fixe sur une charge cyclique. Ou bien un réglage M sur N avec {Datapoints To Alarm}.
+@slide cards Actions d'une alarme
+Possibles :: SNS · **Lambda** · Auto Scaling · EC2 (stop, terminate, reboot, recover) · SSM OpsItem / Incident Manager
+Jamais :: **SQS** directement
+Sinon :: Chaque changement d'état est un **événement EventBridge** → n'importe quelle cible
+@end
 L: Les actions possibles d'une alarme ?
-R: SNS, Lambda directement, Auto Scaling, des actions EC2 comme stop, terminate, reboot ou recover, et un OpsItem SSM ou Incident Manager. Jamais SQS directement. Pour toute autre cible, on passe par EventBridge, puisque chaque changement d'état d'alarme est aussi un événement EventBridge.
-L: Question piège. Une alarme CloudWatch doit envoyer un message dans une file SQS. Possible directement ?
+@all
+R: {SNS}, {Lambda} directement, {Auto Scaling}, des actions {EC2} comme {stop}, {terminate}, {reboot} ou {recover}, et un {OpsItem} {SSM} ou {Incident Manager}. Jamais {SQS} directement. Pour toute autre cible, on passe par {EventBridge}, puisque chaque changement d'état d'alarme est aussi un événement {EventBridge}.
+@slide quiz QUESTION PIÈGE
+Une alarme CloudWatch doit envoyer un message dans une file SQS. Possible directement ?
+> **Non.** Alarme → SNS (SQS abonné au topic), ou une règle EventBridge.
+@end
+L: Question piège. Une alarme {CloudWatch} doit envoyer un message dans une file {SQS}. Possible directement ?
 [pause 4]
-R: Non. Soit l'alarme publie sur SNS, et SQS est abonné au topic. Soit on passe par une règle EventBridge.
-L: CloudWatch Logs maintenant. Tu dis souvent qu'il y a quatre sorties à distinguer.
-R: Oui. Un : alerter sur un motif dans les logs, comme ERROR ou quatre cent quatre. C'est un metric filter, qui crée une métrique, sur laquelle on met une alarme. Deux : streamer les logs en temps réel vers OpenSearch, Lambda, Kinesis ou Firehose. C'est un subscription filter. Trois : une requête ponctuelle pour enquêter. C'est Logs Insights. Quatre : archiver sur le long terme et analyser en SQL. C'est l'export vers S3, puis Athena.
-L: L'export S3, il est rapide ?
-R: Non, c'est du batch, avec jusqu'à douze heures de latence. Jamais la réponse quand on parle de temps réel.
-L: Les cibles d'un subscription filter ?
-R: Kinesis Data Streams, Firehose, Lambda, ou OpenSearch. Jamais SQS ni SNS. Maximum deux subscription filters par log group, plus un subscription filter au niveau du compte.
+@answer
+R: Non. Soit l'alarme publie sur {SNS}, et {SQS} est abonné au {topic}. Soit on passe par une règle {EventBridge}.
+@slide table CloudWatch Logs — les 4 sorties
+Besoin | Mécanisme
+**Alerter** sur un motif (ERROR, 404) | Metric filter → métrique → alarme
+**Streamer** en temps réel | Subscription filter → Kinesis, Firehose, Lambda, OpenSearch
+**Enquêter** à la main | Logs Insights
+**Archiver** et analyser en SQL | Export S3 (batch, jusqu'à 12 h) + Athena
+@end
+L: {CloudWatch Logs} maintenant. Tu dis souvent qu'il y a quatre sorties à distinguer.
+@+
+R: Oui. Un : alerter sur un motif dans les logs, comme {ERROR} ou quatre cent quatre. C'est un {metric filter}, qui crée une métrique, sur laquelle on met une alarme.
+@+
+R: Deux : {streamer} les logs en temps réel vers {OpenSearch}, {Lambda}, {Kinesis} ou {Firehose}. C'est un {subscription filter}.
+@+
+R: Trois : une requête ponctuelle pour enquêter. C'est {Logs Insights}.
+@+
+R: Quatre : archiver sur le long terme et analyser en {SQL}. C'est l'export vers {S3}, puis {Athena}.
+L: L'export {S3}, il est rapide ?
+R: Non, c'est du {batch}, avec jusqu'à douze heures de latence. Jamais la réponse quand on parle de temps réel.
+L: Les cibles d'un {subscription filter} ?
+R: {Kinesis Data Streams}, {Firehose}, {Lambda}, ou {OpenSearch}. Jamais {SQS} ni {SNS}. Maximum deux {subscription filters} par {log group}, plus un {subscription filter} au niveau du compte.
+@slide flow Centraliser les logs de N comptes
+Comptes applicatifs :: subscription filter
+Destination :: compte central, destination policy
+Kinesis Data Streams ou Firehose :: pas Lambda
+Stockage / analyse :: S3, OpenSearch
+@end
 L: Question. Centraliser les logs de cinquante comptes dans un compte central.
 [pause 4]
-R: Dans chaque compte, un subscription filter vers une destination dans le compte central. Cette destination est adossée à Kinesis Data Streams ou à Firehose. Pas à Lambda.
+@all
+R: Dans chaque compte, un {subscription filter} vers une {destination} dans le compte central. Cette {destination} est adossée à {Kinesis Data Streams} ou à {Firehose}. Pas à {Lambda}.
+@slide bullets Logs — à retenir aussi
+Rétention **infinie par défaut** → toujours la régler (coût)
+Data protection policies : masquer les données sensibles
+Live Tail (suivi en direct) · Contributor Insights (top IP, top clés)
+VPC Flow Logs : ACCEPT / REJECT, **pas le contenu** · access logs ALB, CloudFront, S3 → Athena
+@end
 L: La rétention des logs ?
-R: Par défaut, infinie. Il faut toujours la configurer. C'est souvent la réponse aux questions de coût, avec l'export vers S3 et Glacier.
+@+
+R: Par défaut, infinie. Il faut toujours la configurer. C'est souvent la réponse aux questions de coût, avec l'export vers {S3} et {Glacier}.
 L: Autres fonctionnalités des logs ?
-R: Les data protection policies, pour masquer automatiquement les données sensibles dans les logs. Live Tail, pour suivre en direct pendant un déploiement. Et Contributor Insights, pour trouver les principaux contributeurs, par exemple les IP qui font le plus de requêtes.
+@+2
+R: Les {data protection policies}, pour masquer automatiquement les données sensibles dans les logs. {Live Tail}, pour suivre en direct pendant un déploiement. Et {Contributor Insights}, pour trouver les principaux contributeurs, par exemple les {IP} qui font le plus de requêtes.
 L: Et les sources de logs à connaître ?
-R: Les VPC Flow Logs, qui indiquent si le trafic est accepté ou rejeté, mais qui ne capturent pas le contenu des paquets. Les access logs de l'ALB, de CloudFront et de S3, envoyés dans S3 et analysables avec Athena. Les query logs de Route 53. Et les logs de RDS, Lambda et ECS.
-L: Grand classique : CloudTrail, Config, CloudWatch. Qui répond à quoi ?
-R: Qui a fait cet appel d'API, quand, depuis quelle IP : CloudTrail. Quelle était la configuration de cette ressource à un instant donné, et a-t-elle changé : AWS Config. Comment se comporte la ressource, ses performances, ses erreurs, sa latence : CloudWatch.
-L: Question. Quelqu'un a supprimé un security group. Qui ?
+@+
+R: Les {VPC Flow Logs}, qui indiquent si le trafic est accepté ou rejeté, mais qui ne capturent pas le contenu des paquets. Les {access logs} de l'{ALB}, de {CloudFront} et de {S3}, envoyés dans {S3} et analysables avec {Athena}. Les {query logs} de {Route 53}. Et les logs de {RDS}, {Lambda} et {ECS}.
+@slide cards Qui répond à quoi ?
+CloudTrail :: **Qui** a fait cet appel d'API, quand, depuis quelle IP ?
+AWS Config :: **Quelle était la configuration** de la ressource à l'instant T ? A-t-elle changé ? Est-elle conforme ?
+CloudWatch :: **Comment se comporte** la ressource : performance, erreurs, latence
+@end
+L: Grand classique : {CloudTrail}, {Config}, {CloudWatch}. Qui répond à quoi ?
+@+
+R: Qui a fait cet appel d'{API}, quand, depuis quelle {IP} : {CloudTrail}.
+@+
+R: Quelle était la configuration de cette ressource à un instant donné, et a-t-elle changé : {AWS Config}.
+@+
+R: Comment se comporte la ressource, ses performances, ses erreurs, sa latence : {CloudWatch}.
+@slide quiz QUESTION
+Quelqu'un a supprimé un security group. Qui ?
+> **CloudTrail**. Et ses règles d'avant : **AWS Config**.
+@end
+L: Question. Quelqu'un a supprimé un {security group}. Qui ?
 [pause 3]
-R: CloudTrail. Et si on veut savoir quelles règles il contenait avant : AWS Config.
-L: Les types d'événements CloudTrail ?
-R: Les management events : activés par défaut, avec quatre-vingt-dix jours d'historique dans Event History. Les data events : les objets S3, les invocations Lambda, les items DynamoDB. Ils sont volumineux, payants, et désactivés par défaut. Et les Insights events, qui détectent une activité API anormale.
-L: Et pour réagir vite à un appel d'API ?
-R: CloudTrail livre ses fichiers dans S3 avec environ cinq minutes de délai. Pour réagir en quasi temps réel, on passe par EventBridge : chaque appel d'API arrive comme un événement. Et pour alerter sur un login console sans MFA, on peut envoyer CloudTrail vers CloudWatch Logs, avec un metric filter et une alarme.
+@answer
+R: {CloudTrail}. Et si on veut savoir quelles règles il contenait avant : {AWS Config}.
+@slide bullets CloudTrail
+**Management events** : activés par défaut, 90 jours dans Event history
+**Data events** (objets S3, invoke Lambda, items DynamoDB) : volumineux, payants, **désactivés par défaut**
+Insights events : activité API anormale
+Livraison S3 ~5 min → réagir vite : **EventBridge** (AWS API Call via CloudTrail)
+Intégrité : **log file validation** + digest files + Object Lock + compte dédié
+Organization trail · CloudTrail Lake (requêtes SQL)
+@end
+L: Les types d'événements {CloudTrail} ?
+@+3
+R: Les {management events} : activés par défaut, avec quatre-vingt-dix jours d'historique dans {Event History}. Les {data events} : les objets {S3}, les invocations {Lambda}, les items {DynamoDB}. Ils sont volumineux, payants, et désactivés par défaut. Et les {Insights events}, qui détectent une activité {API} anormale.
+L: Et pour réagir vite à un appel d'{API} ?
+@+
+R: {CloudTrail} livre ses fichiers dans {S3} avec environ cinq minutes de délai. Pour réagir en quasi temps réel, on passe par {EventBridge} : chaque appel d'{API} arrive comme un événement. Et pour alerter sur un login console sans {MFA}, on peut envoyer {CloudTrail} vers {CloudWatch Logs}, avec un {metric filter} et une alarme.
 L: Prouver que les logs d'audit n'ont pas été modifiés ?
-R: La log file validation de CloudTrail, avec les digest files. Plus S3 Object Lock, et un bucket dans un compte dédié.
-L: Les autres fonctionnalités CloudTrail ?
-R: L'organization trail : un seul trail pour tous les comptes, que les comptes membres ne peuvent pas modifier. Et CloudTrail Lake, pour stocker et requêter les événements en SQL, sans passer par S3 et Athena.
-L: Et AWS Config ?
-R: Des configuration items et une timeline des changements. Des règles : managées, custom avec Lambda, ou écrites en Guard. Des conformance packs. La remédiation avec SSM Automation. Et un aggregator pour une vue multi-comptes et multi-régions.
-L: Passons à la traçabilité applicative. X-Ray.
-R: Des traces distribuées, une service map, des segments et des subsegments, des sampling rules. Et une distinction qui tombe : les annotations sont indexées et filtrables, les metadata ne le sont pas. X-Ray, c'est la réponse à : quel microservice cause la latence.
+@+
+R: La {log file validation} de {CloudTrail}, avec les {digest files}. Plus {S3 Object Lock}, et un bucket dans un compte dédié.
+L: Les autres fonctionnalités {CloudTrail} ?
+@+
+R: L'{organization trail} : un seul {trail} pour tous les comptes, que les comptes membres ne peuvent pas modifier. Et {CloudTrail Lake}, pour stocker et requêter les événements en {SQL}, sans passer par {S3} et {Athena}.
+L: Et {AWS Config} ?
+R: Des {configuration items} et une {timeline} des changements. Des règles : managées, {custom} avec {Lambda}, ou écrites en {Guard}. Des {conformance packs}. La remédiation avec {SSM Automation}. Et un {aggregator} pour une vue multi-comptes et multi-régions.
+@slide cards Observabilité applicative
+X-Ray :: Traces, **service map** · **annotations** indexées et filtrables ≠ metadata non indexées
+ADOT :: OpenTelemetry (standard ouvert) · Container Insights · Lambda Insights
+Synthetics :: **Canaries** : tester depuis l'extérieur, avant les utilisateurs
+RUM :: Ce que vivent les **vrais** utilisateurs dans leur navigateur
+@end
+L: Passons à la traçabilité applicative. {X-Ray}.
+@+
+R: Des traces distribuées, une {service map}, des {segments} et des {subsegments}, des {sampling rules}. Et une distinction qui tombe : les {annotations} sont indexées et filtrables, les {metadata} ne le sont pas. {X-Ray}, c'est la réponse à : quel microservice cause la latence.
 L: Et si la question parle de standard ouvert ?
-R: ADOT, AWS Distro for OpenTelemetry. Et pour les métriques détaillées : Container Insights pour ECS et EKS, Lambda Insights pour Lambda.
-L: CloudWatch Synthetics ?
-R: Des canaries. Des scripts qui testent ton application depuis l'extérieur en continu : heartbeat, API, liens cassés, parcours dans l'interface. C'est la réponse à : détecter une panne avant que les utilisateurs ne la remontent. Et à ne pas confondre avec CloudWatch RUM, qui mesure ce que vivent les vrais utilisateurs dans leur navigateur.
+@+
+R: {ADOT}, {AWS Distro for OpenTelemetry}. Et pour les métriques détaillées : {Container Insights} pour {ECS} et {EKS}, {Lambda Insights} pour {Lambda}.
+L: {CloudWatch Synthetics} ?
+@+2
+R: Des {canaries}. Des scripts qui testent ton application depuis l'extérieur en continu : {heartbeat}, {API}, liens cassés, parcours dans l'interface. C'est la réponse à : détecter une panne avant que les utilisateurs ne la remontent. Et à ne pas confondre avec {CloudWatch RUM}, qui mesure ce que vivent les vrais utilisateurs dans leur navigateur.
+@slide quiz QUESTION
+Détecter qu'un site est en panne avant les clients.
+> Un **canary CloudWatch Synthetics**.
+@end
 L: Question. Détecter qu'un site est en panne avant les clients.
 [pause 3]
-R: Un canary CloudWatch Synthetics.
+@answer
+R: Un {canary} {CloudWatch Synthetics}.
+@slide bullets Centraliser et automatiser
+**Cross-account observability** : monitoring account + source accounts, sans copier les données
+Metric streams → Firehose → outil tiers
+EventBridge : pattern ou planning, archive + replay, bus cross-compte, **API destinations**
+Auto-remédiation : événement / alarme → **EventBridge** → SSM Automation ou Lambda → correction + notification
+Téraoctets de logs dans S3 → **Athena** (partitions, Parquet)
+@end
 L: Dernière partie : centraliser et automatiser.
-R: La cross-account observability : un compte de monitoring relié à des comptes sources. Tu consultes les dashboards, les métriques, les logs et les traces de tous les comptes depuis un seul endroit, sans copier les données. Les metric streams, pour envoyer les métriques en quasi temps réel vers Firehose et un outil tiers.
-L: Et EventBridge ?
-R: Le cœur de l'automatisation. Des règles sur un pattern ou un planning, plusieurs cibles, archive et replay, bus cross-compte, et les API destinations pour appeler un webhook externe comme PagerDuty ou Slack. La chaîne type d'auto-remédiation : un événement ou une alarme, EventBridge, SSM Automation ou Lambda, et la correction plus une notification.
-L: Et pour analyser des téraoctets de logs dans S3 ?
-R: Athena, sans infrastructure. Avec du partitionnement et du Parquet pour réduire les coûts.
+@+2
+R: La {cross-account observability} : un compte de {monitoring} relié à des comptes sources. Tu consultes les {dashboards}, les métriques, les logs et les traces de tous les comptes depuis un seul endroit, sans copier les données. Les {metric streams}, pour envoyer les métriques en quasi temps réel vers {Firehose} et un outil tiers.
+L: Et {EventBridge} ?
+@+2
+R: Le cœur de l'automatisation. Des règles sur un {pattern} ou un planning, plusieurs cibles, {archive} et {replay}, bus cross-compte, et les {API destinations} pour appeler un {webhook} externe comme {PagerDuty} ou {Slack}. La chaîne type d'auto-remédiation : un événement ou une alarme, {EventBridge}, {SSM Automation} ou {Lambda}, et la correction plus une notification.
+L: Et pour analyser des téraoctets de logs dans {S3} ?
+@+
+R: {Athena}, sans infrastructure. Avec du partitionnement et du {Parquet} pour réduire les coûts.
+@slide bullets À retenir
+Logs : **metric filter** alerter · **subscription filter** streamer · **Logs Insights** enquêter · **export S3 + Athena** archiver
+**CloudTrail** = qui · **Config** = configuration · **CloudWatch** = performance
+Mémoire / disque EC2 → **agent** · une alarme ne cible **jamais SQS** directement
+@end
 L: Résumé en trois phrases.
-R: Un : les quatre sorties des logs. Metric filter pour alerter, subscription filter pour streamer, Logs Insights pour enquêter, export S3 et Athena pour archiver. Deux : qui a appelé l'API, c'est CloudTrail, la configuration, c'est Config, la performance, c'est CloudWatch. Trois : mémoire et disque EC2, il faut l'agent, et une alarme ne cible jamais SQS directement.
-L: Prochain épisode : Incident et Event Response. À tout de suite.
+@+
+R: Un : les quatre sorties des logs. {Metric filter} pour alerter, {subscription filter} pour {streamer}, {Logs Insights} pour enquêter, export {S3} et {Athena} pour archiver.
+@+
+R: Deux : qui a appelé l'{API}, c'est {CloudTrail}, la configuration, c'est {Config}, la performance, c'est {CloudWatch}.
+@+
+R: Trois : mémoire et disque {EC2}, il faut l'agent, et une alarme ne cible jamais {SQS} directement.
+L: Prochain épisode : {Incident} et {Event Response}. À tout de suite.

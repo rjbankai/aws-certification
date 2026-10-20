@@ -1,0 +1,89 @@
+# Principe — Logs sécurisés et observabilité, en schémas
+@slide title Logs sécurisés et observabilité
+Principe en schémas · Domaine 4
+Chiffrer les logs, traiter des fichiers de logs, tracer avec X-Ray, visualiser
+@end
+L: Les logs, version sécurité et exploitation. Rémy, qu'est-ce qui manquait ?
+R: Quatre gestes de l'examen : chiffrer un {log group} avec {KMS}, traiter des fichiers de logs déposés dans {S3}, activer {X-Ray} selon le service, et choisir entre un tableau de bord {CloudWatch} et {QuickSight}.
+@slide diagram Chiffrer les logs avec KMS
+node app 1 38 18 24 | Application | agent CloudWatch | 📝 | account
+node role 1 72 18 24 | Rôle de l'instance | CloudWatchAgent ServerPolicy | 🎭 | proactive
+node lg 26 38 22 24 | Log group | clé KMS associée | 📜 | service
+node key 56 38 20 24 | Clé KMS | customer managed | 🔐 | prev
+node pol 56 4 20 26 | Key policy | autorise le service logs | 📄 | detect
+node ct 82 38 17 24 | CloudTrail | SSE-KMS aussi | 🕵️ | org
+arrow w1 app lg | PutLogEvents | | account
+arrow w2 role app | | dashed | proactive
+arrow w3 lg key | chiffre avec | | prev
+arrow w4 pol key | | dashed | detect
+@end
+@show app lg w1
+@flow w1
+L: Comment on chiffre des logs ?
+R: Les logs {CloudWatch} sont toujours chiffrés au repos. Mais pour contrôler la clé et auditer son usage, on associe une clé {KMS} {customer managed} au {log group}.
+@show key w3 pol w4
+@focus lg w3 key w4 pol
+@flow w3
+R: Le piège : la {key policy} doit autoriser le service {CloudWatch Logs} de la région à utiliser la clé. Sans cette ligne, l'association échoue.
+@show role w2
+@focus role w2 app
+R: Côté collecte, l'instance a besoin d'un rôle avec la politique {CloudWatch Agent Server Policy} pour que l'agent puisse écrire. Et en transit, tout passe en {TLS}.
+@show ct
+@focus ct
+R: Même logique pour {CloudTrail} : chiffrement {SSE-KMS} des fichiers, avec une {key policy} qui autorise {CloudTrail}.
+@unfocus
+@slide diagram Traiter des fichiers de logs déposés dans S3
+node src 1 38 18 24 | ALB · CloudFront | access logs | ⚖️ | service
+node s3 25 38 18 24 | Bucket S3 | fichiers de logs | 🪣 | data
+node ev 49 38 18 24 | Événement S3 | ObjectCreated | 🔔 | detect
+node fn 73 38 26 24 | Lambda | lit, filtre, transforme | λ | proactive
+node os 73 4 26 24 | OpenSearch | recherche, tableaux | 🔍 | ou
+node cwl 73 72 26 24 | CloudWatch Logs | métriques, alarmes | 📜 | service
+arrow f1 src s3 | | | service
+arrow f2 s3 ev | | | data
+arrow f3 ev fn | déclenche | | detect
+arrow f4 fn os | | | ou
+arrow f5 fn cwl | | | service
+@end
+@show src s3 f1
+@flow f1
+L: Et des logs qui arrivent sous forme de fichiers ?
+R: Les {access logs} de l'{ALB} ou de {CloudFront} sont livrés en fichiers dans {S3}. Pas dans {CloudWatch Logs}.
+@show ev fn f2 f3
+@focus s3 f2 ev f3 fn
+@flow f2 f3
+R: Pour les exploiter automatiquement : une notification d'événement {S3}, sur la création d'objet, déclenche une {Lambda}.
+@show os cwl f4 f5
+@focus fn f4 os f5 cwl
+@flow f4 f5
+R: La {Lambda} lit le fichier, le filtre, et l'envoie vers {OpenSearch} pour la recherche, ou vers {CloudWatch Logs} pour créer des métriques et des alarmes. Pour de l'analyse ponctuelle en {SQL}, {Athena} interroge directement les fichiers.
+@unfocus
+@slide table X-Ray selon le service
+Service | Comment activer le traçage
+Lambda | **Active tracing** dans la configuration de la fonction
+API Gateway | **Tracing** activé sur le stage
+ECS · EKS | **Daemon X-Ray** en sidecar, ou collecteur **ADOT**
+EC2 | Daemon X-Ray sur l'instance + SDK dans le code
+Partout | Sampling rules · **annotations** indexées pour filtrer
+@end
+@+2
+L: Et {X-Ray}, selon le service ?
+R: Sur {Lambda} : l'{active tracing}. Sur {API Gateway} : on active le {tracing} sur le {stage}.
+@+3
+R: Sur {ECS} et {EKS} : le {daemon} {X-Ray} en conteneur {sidecar}, ou le collecteur {ADOT}. Sur {EC2} : le {daemon} sur l'instance, et le {SDK} dans le code. Avec des {sampling rules} pour limiter le volume.
+@slide cards Visualiser
+CloudWatch dashboards :: Métriques et logs opérationnels, en direct · multi-comptes, multi-régions
+Amazon QuickSight :: Tableaux de bord **métier** et BI, sur Athena, S3 ou une base
+Metric streams :: Métriques en continu vers Firehose → S3 ou un outil tiers
+@end
+@all
+L: Et pour visualiser ?
+R: Les {dashboards} {CloudWatch} pour l'exploitation en direct, y compris multi-comptes. {QuickSight} pour des tableaux de bord métier, sur des données dans {Athena} ou {S3}. Et les {metric streams} pour envoyer les métriques en continu vers {Firehose}.
+@slide quiz QUESTION
+Associer une clé KMS customer managed à un log group échoue. Cause la plus probable ?
+> La **key policy** n'autorise pas le service **CloudWatch Logs** (logs.<région>.amazonaws.com) à utiliser la clé.
+@end
+L: Question. L'association d'une clé {KMS} à un {log group} échoue. Pourquoi ?
+[pause 4]
+@answer
+R: La {key policy} n'autorise pas le service {CloudWatch Logs}.

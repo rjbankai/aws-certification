@@ -1,0 +1,69 @@
+# Principe — Identités : fédération, ABAC et rotation des secrets, en schémas
+@slide title Identités : fédération, ABAC, rotation
+Principe en schémas · Domaine 6
+Plus de clés d'accès longues : des identités fédérées, des droits par tags, des secrets qui tournent seuls
+@end
+L: Les identités. Rémy, quel est le fil conducteur ?
+R: Supprimer les clés d'accès longues durée. Les humains et les machines obtiennent des identifiants temporaires, les droits suivent les {tags}, et les secrets des bases tournent automatiquement.
+@slide diagram Fédérer humains et machines
+node idp 1 4 22 26 | Annuaire d'entreprise | Entra ID, Okta… SAML, SCIM | 🏢 | user
+node ic 30 4 26 26 | IAM Identity Center | permission sets | 🔑 | service
+node acc 64 4 35 26 | Comptes AWS | rôles créés automatiquement | 🏛️ | account
+node gh 1 66 22 28 | GitHub Actions | jeton OIDC | 🐙 | ou
+node oidc 30 66 26 28 | Fournisseur OIDC IAM | trust : repo et branche | 🎫 | proactive
+node role 64 66 35 28 | Rôle IAM | AssumeRoleWithWebIdentity | 🎭 | proactive
+arrow h1 idp ic | SAML + SCIM | | user
+arrow h2 ic acc | | | service
+arrow m1 gh oidc | | | ou
+arrow m2 oidc role | identifiants temporaires | | proactive
+@end
+@show idp ic acc h1 h2
+@flow h1 h2
+L: Commençons par les humains.
+R: {IAM Identity Center}, connecté à l'annuaire de l'entreprise en {SAML}, avec {SCIM} pour synchroniser les utilisateurs et les groupes. Les {permission sets} deviennent des rôles dans chaque compte. Fini les utilisateurs {IAM}.
+@show gh oidc role m1 m2
+@focus gh m1 oidc m2 role
+@flow m1 m2
+R: Et les machines extérieures à {AWS}, comme un pipeline {GitHub Actions} ? Pas de clé d'accès stockée dans {GitHub}. On déclare {GitHub} comme fournisseur {OIDC} dans {IAM}. Le pipeline présente son jeton et assume un rôle, avec {Assume Role With Web Identity}.
+@focus oidc
+R: Le point de sécurité : la {trust policy} du rôle restreint le jeton accepté, par exemple seulement tel dépôt et telle branche, grâce aux conditions sur {sub} et {aud}.
+@unfocus
+L: Et les serveurs {on-premises} ?
+R: {IAM Roles Anywhere}, avec des certificats. Et les utilisateurs d'une application mobile : {Amazon Cognito}.
+@slide diagram ABAC : des droits qui suivent les tags
+node dev 1 30 26 40 | Développeuse | tag projet = alpha | 👩‍💻 | user
+node pol 34 30 30 40 | Une seule politique | autorise si PrincipalTag = ResourceTag | 📄 | service
+node ra 72 4 27 26 | Ressource alpha | tag projet = alpha | ✅ | data
+node rb 72 72 27 26 | Ressource beta | tag projet = beta | ⛔ | prev
+arrow a1 dev pol | | | user
+arrow a2 pol ra | autorisé | | data
+arrow a3 pol rb | refusé | dashed | prev
+@end
+@show dev pol a1
+L: L'{ABAC}, c'est quoi ?
+R: Le contrôle d'accès par attributs. Au lieu d'une politique par projet, une seule politique dit : autorisé si le {tag} de la personne est égal au {tag} de la ressource.
+@show ra rb a2 a3
+@focus a2 ra a3 rb
+@flow a2 a3
+R: La développeuse du projet {alpha} accède aux ressources {alpha}, pas aux ressources {beta}. Un nouveau projet ? On pose des {tags}, aucune politique à écrire. Les {tags} peuvent même venir de l'annuaire, en {session tags}.
+@unfocus
+@slide flow Rotation automatique d'un secret
+createSecret :: nouvelle valeur (AWSPENDING)
+setSecret :: appliquée à la base
+testSecret :: connexion testée
+!finishSecret :: AWSPENDING → AWSCURRENT
+> Lambda de rotation planifiée (ex. tous les 30 jours) · stratégie **utilisateur unique** ou **utilisateurs alternés** · ancienne valeur : **AWSPREVIOUS**
+@end
+@all
+L: Et la rotation des secrets ?
+R: {Secrets Manager} planifie une {Lambda} de rotation, fournie toute faite pour {RDS}, {Aurora}, {Redshift} ou {DocumentDB}. Quatre étapes : créer la nouvelle valeur, l'appliquer à la base, la tester, puis la promouvoir. Les étiquettes passent de {AWSPENDING} à {AWSCURRENT}, et l'ancienne devient {AWSPREVIOUS}.
+L: Utilisateur unique ou alterné ?
+R: Avec un utilisateur unique, il y a un court instant où l'ancien mot de passe ne marche plus. Avec deux utilisateurs alternés, il y en a toujours un valide : c'est la réponse quand on exige zéro interruption. Et si la {Lambda} est dans un {VPC}, elle doit pouvoir joindre {Secrets Manager}, avec un {endpoint} ou une {NAT}.
+@slide quiz QUESTION
+Un pipeline GitHub Actions doit déployer sur AWS sans stocker de clés d'accès longue durée.
+> **Fournisseur OIDC IAM** pour GitHub + rôle assumé par **AssumeRoleWithWebIdentity**, trust policy restreinte au dépôt et à la branche.
+@end
+L: Question. {GitHub Actions} doit déployer sur {AWS} sans clé d'accès stockée.
+[pause 4]
+@answer
+R: Un fournisseur {OIDC} {IAM} pour {GitHub}, et un rôle assumé avec un jeton {web identity}, limité au dépôt.

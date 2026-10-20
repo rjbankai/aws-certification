@@ -1,0 +1,71 @@
+# Principe — Systems Manager en schémas
+@slide title Systems Manager
+Principe en schémas · Domaine 2
+Trois prérequis, et la bonne fonctionnalité pour chaque besoin
+@end
+L: {Systems Manager}. Beaucoup de fonctionnalités, Rémy. Par où commencer ?
+R: Par les prérequis. Une question sur deux est : l'instance n'apparaît pas dans {Fleet Manager}, pourquoi ? Et la réponse est toujours l'un de trois points.
+@slide diagram Les 3 prérequis
+node inst 1 38 18 24 | Instance EC2 | ou serveur on-prem | 🖥️ | account
+node agent 27 4 24 24 | Agent SSM | installé et démarré | 🤖 | service
+node role 27 38 24 24 | Rôle IAM | AmazonSSMManagedInstanceCore | 🎭 | proactive
+node net 27 72 24 24 | Réseau | NAT ou VPC endpoints | 🔌 | detect
+node ssm 70 38 28 24 | Systems Manager | Fleet Manager | 🛠️ | service
+arrow i1 inst agent | | | account
+arrow i2 inst role | | | account
+arrow i3 inst net | | | account
+arrow a1 agent ssm | | | service
+arrow a2 role ssm | | | proactive
+arrow a3 net ssm | | | detect
+@end
+@show inst ssm
+L: Une instance doit apparaître dans {Systems Manager}.
+@show agent i1 a1
+@focus agent i1 a1
+@flow i1 a1
+R: Un : l'agent {SSM} installé et démarré. Il est déjà présent sur les {AMI} {Amazon Linux} récentes.
+@show role i2 a2
+@focus role i2 a2
+@flow i2 a2
+R: Deux : un profil d'instance avec la politique {Amazon SSM Managed Instance Core}.
+@show net i3 a3
+@focus net i3 a3
+@flow i3 a3
+R: Trois : le réseau. L'agent sort vers le service : il faut une {NAT gateway}, ou des {VPC endpoints} pour {ssm}, {ssmmessages} et {ec2messages}. Aucun port entrant, pas de port vingt-deux.
+@unfocus
+L: Et un serveur {on-premises} ?
+R: Une {hybrid activation}. Il apparaît alors avec un identifiant qui commence par {m i}.
+@slide table Quelle fonctionnalité ?
+Besoin | Fonctionnalité
+Commande ponctuelle sur une flotte | **Run Command** (ciblage par tags)
+Garder une config dans le temps, corriger la dérive | **State Manager**
+Patcher selon des règles | **Patch Manager** + baselines + patch groups
+Fenêtre planifiée | **Maintenance Windows**
+Runbook multi-étapes, approbations | **Automation**
+Shell sans SSH ni bastion | **Session Manager** (logs vers S3 / CloudWatch)
+@end
+@+2
+L: Maintenant, la carte des fonctionnalités.
+R: Une commande ponctuelle : {Run Command}. Garder une configuration dans le temps, et corriger la dérive : {State Manager}. Retiens : {Run Command}, c'est une fois. {State Manager}, c'est tout le temps.
+@+2
+R: Patcher un parc : {Patch Manager}, avec des {baselines}, des {patch groups} par {tag}, et une {Maintenance Window} pour le faire la nuit.
+@+2
+R: Un {runbook} en plusieurs étapes : {Automation}. Et pour remplacer {SSH} et les bastions : {Session Manager}, avec les sessions journalisées.
+@slide flow Patcher un parc
+Patch baseline :: quels patchs, quel délai
+Patch group :: tag Patch Group
+Maintenance Window :: la nuit
+Run Command :: AWS-RunPatchBaseline
+!Compliance :: rapport de conformité
+@end
+@all
+L: Et le patch, de bout en bout ?
+R: Une {baseline} définit les patchs approuvés. Les instances sont regroupées par le {tag} {Patch Group}. Une {Maintenance Window} lance le document {AWS RunPatchBaseline}. Et le rapport de conformité montre ce qui manque.
+@slide quiz QUESTION
+Une instance d'un subnet privé sans NAT n'apparaît pas dans Fleet Manager. L'agent tourne. Que faire ? (2 réponses)
+> **Rôle IAM** avec AmazonSSMManagedInstanceCore + **VPC endpoints** ssm, ssmmessages, ec2messages.
+@end
+L: Question. Subnet privé sans {NAT}, l'agent tourne, l'instance n'apparaît pas. Deux actions ?
+[pause 5]
+@answer
+R: Le rôle {IAM} avec {Amazon SSM Managed Instance Core}, et les {VPC endpoints} {ssm}, {ssmmessages} et {ec2messages}.

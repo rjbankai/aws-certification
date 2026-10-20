@@ -1,0 +1,65 @@
+# Principe — Task execution role ou task role, en schémas
+@slide title ECS : les deux rôles d'une tâche
+Principe en schémas · Domaine 5
+Qui démarre la tâche, et qui travaille dedans
+@end
+L: Sur {ECS}, une tâche a deux rôles {IAM}. Rémy, comment ne plus les confondre ?
+R: En regardant qui les utilise. L'un sert à {ECS} pour démarrer la tâche, l'autre sert à ton code une fois qu'il tourne.
+@slide diagram Deux rôles, deux utilisateurs
+group task 1 4 60 92 | Tâche ECS (Fargate) | service
+node agent 4 13 26 28 | Agent ECS | démarre la tâche | 🤖 | #6b7a93
+node er 33 13 25 28 | Task execution role | | 🎭 | proactive
+node app 4 60 26 28 | Ton application | le conteneur | 🧩 | user
+node tr 33 60 25 28 | Task role | | 🎭 | data
+node ecr 66 2 33 18 | ECR | tirer l'image | 📦 | proactive
+node cwl 66 23 33 18 | CloudWatch Logs | écrire les logs | 📜 | proactive
+node sm 66 44 33 18 | Secrets Manager | secrets injectés au démarrage | 🔑 | proactive
+node s3 66 72 33 22 | S3 · DynamoDB · SQS | ce que fait ton code | 🗄️ | data
+arrow u1 agent er | utilise | | proactive
+arrow e1 er ecr | | | proactive
+arrow e2 er cwl | | | proactive
+arrow e3 er sm | | | proactive
+arrow u2 app tr | utilise | | data
+arrow t1 tr s3 | | | data
+@end
+@show task agent er u1
+L: Au démarrage de la tâche, qui fait le travail ?
+R: {ECS} lui-même. Et il utilise le {task execution role}.
+@show ecr cwl sm e1 e2 e3
+@focus er e1 e2 e3 ecr cwl sm
+@flow e1 e2 e3
+R: Avec ce rôle, {ECS} tire l'image depuis {ECR}, crée le flux de logs dans {CloudWatch Logs}, et lit les secrets à injecter dans le conteneur.
+@show app tr u2 s3 t1
+@focus app u2 tr t1 s3
+@flow u2 t1
+R: Une fois la tâche lancée, ton application appelle {S3}, {DynamoDB} ou {SQS}. Elle utilise l'autre rôle : le {task role}.
+@unfocus
+L: Le moyen de s'en souvenir ?
+R: {Execution role}, c'est {ECS} qui démarre. {Task role}, c'est ton code qui travaille.
+@slide diagram CannotPullContainerError
+node task 1 38 22 24 | Tâche ECS | subnet privé, sans NAT | 🧩 | service
+node er 30 4 26 26 | Task execution role | AmazonECSTaskExecutionRolePolicy | 🎭 | proactive
+node vpce 30 70 26 26 | VPC endpoints | ecr.api, ecr.dkr + gateway S3 | 🚪 | detect
+node ecr 66 38 33 24 | ECR | couches de l'image dans S3 | 📦 | proactive
+arrow p1 task er | | | proactive
+arrow p2 task vpce | | | detect
+arrow p3 vpce ecr | | | detect
+@end
+@show task ecr
+L: Et l'erreur {Cannot Pull Container Error} ?
+@show er p1
+@focus task p1 er
+R: Deux causes. La première : le {task execution role} n'a pas les droits sur {ECR}. Attention, le piège est de corriger le {task role} : ce n'est pas lui qui tire l'image.
+@show vpce p2 p3
+@focus task p2 vpce p3 ecr
+@flow p2 p3
+R: La seconde : le réseau. Dans un subnet privé sans {NAT}, il faut des {VPC endpoints} pour {ECR}, l'{API} et {Docker}, plus un {gateway endpoint} {S3}, parce que les couches de l'image sont stockées dans {S3}.
+@unfocus
+@slide quiz QUESTION
+La tâche démarre, mais l'application reçoit AccessDenied en écrivant dans un bucket S3. Quel rôle corriger ?
+> Le **task role** (l'execution role sert au démarrage : ECR, logs, secrets).
+@end
+L: Question. La tâche démarre, mais l'application reçoit {Access Denied} sur {S3}. Quel rôle ?
+[pause 4]
+@answer
+R: Le {task role}. La tâche a démarré, donc l'{execution role} fonctionne.

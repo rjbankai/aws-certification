@@ -1,0 +1,62 @@
+# Principe — Centraliser les logs de N comptes, en schémas
+@slide title Centraliser les logs de N comptes
+Principe en schémas · Domaine 4
+Subscription filter, destination et Kinesis : le pattern multi-comptes
+@end
+L: Centraliser les logs de cinquante comptes dans un compte central. C'est un grand classique ?
+R: Oui, et il y a un détail qui fait tomber beaucoup de monde : la destination côté compte central ne peut pas être une {Lambda}. On le voit tout de suite sur le schéma.
+@slide diagram Le pattern multi-comptes
+group a 1 2 30 30 | Compte A | account
+node la 3 10 26 18 | Log group | + subscription filter | 📜 | service
+group b 1 36 30 30 | Compte B | account
+node lb 3 44 26 18 | Log group | + subscription filter | 📜 | service
+group c 1 70 30 28 | Compte C… | account
+node lc 3 77 26 18 | Log group | + subscription filter | 📜 | service
+group central 37 2 62 96 | Compte central (log archive) | org
+node dest 40 38 20 26 | Destination | PutDestination + policy | 🎯 | proactive
+node kds 66 38 31 26 | Kinesis Data Streams | ou Firehose | 🌊 | data
+node s3 66 76 31 20 | S3 · OpenSearch | stockage, recherche | 🗄️ | #6b7a93
+node pol 40 8 20 22 | Destination policy | autorise les comptes A, B, C | 📄 | detect
+arrow x1 la dest | | | service
+arrow x2 lb dest | | | service
+arrow x3 lc dest | | | service
+arrow k1 dest kds | | | data
+arrow k2 kds s3 | | | data
+arrow p1 pol dest | | dashed | detect
+@end
+@show a la b lb c lc
+L: Chaque compte applicatif a ses {log groups}.
+@show central dest x1 x2 x3
+@flow x1 x2 x3
+R: Sur chaque {log group}, un {subscription filter}. Sa cible n'est pas un service directement, mais une destination, dans le compte central.
+@show pol p1
+@focus pol p1 dest
+R: La destination se crée avec {Put Destination}, et elle a sa propre politique : la {destination policy}, qui liste les comptes autorisés à y envoyer leurs logs.
+@show kds k1
+@focus dest k1 kds
+@flow k1
+R: Et derrière la destination : {Kinesis Data Streams}, ou {Firehose}. Pas {Lambda}, pas {SQS}. C'est le piège.
+@show s3 k2
+@focus kds k2 s3
+@flow k2
+R: Ensuite, {Firehose} livre vers {S3}, {OpenSearch} ou un outil tiers, avec du {buffering} et de la compression.
+@unfocus
+L: Et pour les métriques et les traces, c'est le même principe ?
+R: Non. Pour les métriques, les {dashboards} et les traces, c'est la {cross-account observability} : un compte de {monitoring} relié à des comptes sources, sans copier les données.
+@slide cards Centraliser : qui fait quoi
+Logs :: Subscription filter → **destination** → Kinesis Data Streams ou Firehose
+Métriques, dashboards, traces :: **Cross-account observability** (monitoring account + source accounts)
+Audit des appels d'API :: **Organization trail** CloudTrail
+Conformité :: **Aggregator** AWS Config multi-comptes, multi-régions
+@end
+@all
+L: Le réflexe ?
+R: Logs : {subscription filter} et destination {Kinesis}. Métriques : {cross-account observability}. Audit : {organization trail}. Conformité : {aggregator} {Config}.
+@slide quiz QUESTION
+Les logs de 50 comptes doivent arriver en quasi temps réel dans un compte central. La cible de la destination peut-elle être une Lambda ?
+> **Non** : une destination cross-compte s'appuie sur **Kinesis Data Streams ou Firehose**.
+@end
+L: Question. La destination cross-compte peut-elle être une {Lambda} ?
+[pause 4]
+@answer
+R: Non. {Kinesis Data Streams} ou {Firehose}.

@@ -1,0 +1,16 @@
+{
+  "name": "dop-c02-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App Android hors ligne du simulateur DOP-C02 (build : python build.py)",
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

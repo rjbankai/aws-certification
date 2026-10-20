@@ -1,0 +1,68 @@
+# Principe — Blue/green sur Elastic Beanstalk, en schémas
+@slide title Blue/green sur Elastic Beanstalk
+Principe en schémas · Domaine 1
+Le swap de CNAME, et pourquoi la base doit vivre ailleurs
+@end
+L: Le {blue/green} sur {Elastic Beanstalk}. Deux pièges dans un seul schéma, Rémy ?
+R: Oui. Un : ce n'est pas une politique de déploiement, c'est une action. Deux : si la base de données vit dans l'environnement, elle disparaît avec lui.
+@slide diagram Le swap de CNAME
+node users 34 0 32 20 | Utilisateurs | monapp.elasticbeanstalk.com | 👥 | user
+group blue 1 35 46 40 | Environnement bleu · v1 | account
+node b1 4 45 40 24 | Instances v1 | ASG + load balancer | 🟦 | account
+group green 53 35 46 40 | Environnement vert · v2 | data
+node g1 56 45 40 24 | Instances v2 | ASG + load balancer | 🟩 | data
+node rds 30 79 40 20 | Base RDS — hors d'Elastic Beanstalk | URL en variable d'environnement | 🗄️ | prev
+arrow u1 users b1 | CNAME | | user
+arrow u2 users g1 | CNAME après swap | | data
+arrow d1 b1 rds | | dashed | prev
+arrow d2 g1 rds | | dashed | prev
+@end
+@show users blue b1 u1
+@flow u1
+L: On part de l'environnement bleu, en production.
+R: Les utilisateurs arrivent par l'{URL} de l'environnement, un {CNAME} qui pointe vers le bleu.
+@show green g1
+@focus green g1
+R: On crée un second environnement complet, le vert, avec la nouvelle version. On peut le tester tranquillement : personne ne l'utilise encore.
+@show rds d1 d2
+@focus rds d1 d2
+R: Les deux environnements parlent à la même base {RDS}. Et elle est créée en dehors d'{Elastic Beanstalk}, avec son adresse passée en variable d'environnement.
+@hide u1
+@show u2
+@focus users u2 green g1
+@flow u2
+R: Quand tout est prêt : {Swap Environment CNAMEs}. Les {URL} sont échangées, les utilisateurs arrivent sur le vert. Et le {rollback} est instantané : on refait le {swap}.
+@unfocus
+@slide diagram Le piège : la base dans l'environnement
+group env 1 4 60 92 | Environnement Elastic Beanstalk | account
+node inst 4 15 26 28 | Instances | | 🖥️ | account
+node rdsin 33 15 25 28 | RDS créée par Beanstalk | | 🗄️ | prev
+node del 4 60 54 28 | Supprimer l'environnement | la base est supprimée avec lui | 🗑️ | prev
+node ok 66 30 33 40 | La bonne pratique | RDS à part, URL en variable d'environnement | ✅ | data
+@end
+@show env inst rdsin
+L: Et si on avait créé la base avec {Elastic Beanstalk} ?
+@show del
+@focus del rdsin
+R: Elle fait partie de l'environnement. Supprimer l'environnement, ou le remplacer en {blue/green}, supprime la base avec lui.
+@show ok
+@focus ok
+R: Pour la production : la base {RDS} est créée à part, et l'application la trouve par une variable d'environnement.
+@unfocus
+@slide cards Elastic Beanstalk : à retenir
+Politiques :: All at once · Rolling · Rolling with additional batch · **Immutable** · Traffic splitting
+Blue/green :: **Pas une politique** : 2 environnements + SwapEnvironmentCNAMEs
+Personnaliser :: .ebextensions/*.config · saved configurations
+Tâches de fond :: Worker environment + cron.yaml (SQS)
+@end
+@all
+L: On résume ?
+R: Cinq politiques de déploiement, le {blue/green} à part avec le {swap} de {CNAME}, la base hors de l'environnement. Et les {ebextensions} pour personnaliser.
+@slide quiz QUESTION
+Changer de version de runtime en production sur Elastic Beanstalk avec un rollback instantané.
+> **Blue/green** : nouvel environnement + **Swap Environment CNAMEs** (base RDS hors de l'environnement).
+@end
+L: Question. Changer de version de {runtime} en production, avec {rollback} instantané.
+[pause 4]
+@answer
+R: {Blue/green} : un nouvel environnement et un {swap} de {CNAME}.

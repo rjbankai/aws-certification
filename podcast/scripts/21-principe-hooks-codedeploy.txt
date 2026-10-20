@@ -1,0 +1,111 @@
+# Principe — Les hooks CodeDeploy en schémas
+@slide title Les hooks CodeDeploy
+Principe en schémas · Domaine 1
+Où placer les tests, avant que le vrai trafic bascule
+@end
+L: Les {hooks} {CodeDeploy}, en schémas. Rémy, pourquoi c'est si important à l'examen ?
+R: Parce qu'une question sur deux demande où placer les tests, pour valider la nouvelle version avant que les vrais utilisateurs la voient. Et la réponse dépend de la plateforme.
+@slide diagram ECS blue/green avec CodeDeploy
+node users 1 39 13 22 | Utilisateurs | trafic réel | 👥 | user
+node alb 17 39 14 22 | ALB | load balancer | ⚖️ | service
+node lprod 36 8 18 22 | Listener prod | port 443 | 🔀 | service
+node ltest 36 70 18 22 | Listener de test | port 8443 | 🧪 | proactive
+node blue 62 8 18 22 | Task set bleu | version actuelle | 🟦 | account
+node green 62 70 18 22 | Task set vert | nouvelle version | 🟩 | data
+node tests 84 39 15 22 | Tests | Lambda du hook | ✅ | proactive
+arrow u1 users alb | | | user
+arrow a1 alb lprod | | | service
+arrow a2 alb ltest | | | proactive
+arrow p1 lprod blue | 100 % | | service
+arrow t1 ltest green | trafic de test | | proactive
+arrow h1 tests green | valide | dashed | proactive
+arrow p2 lprod green | 100 % | | data
+@end
+@show users alb lprod blue u1 a1 p1
+@flow u1 a1 p1
+L: On part d'un service {ECS} en production.
+R: Les utilisateurs passent par l'{ALB}, le {listener} de production, et arrivent sur le {task set} bleu, la version actuelle.
+@show green
+@focus green
+R: {CodeDeploy} lance un {task set} vert avec la nouvelle version. Ce sont les {hooks} {Before Install}, {Install} et {After Install}. Pour l'instant, il ne reçoit aucun trafic.
+@show ltest a2 t1
+@focus ltest a2 t1 green
+@flow a2 t1
+R: Puis {Allow Test Traffic} : le {listener} de test, sur un autre port, envoie du trafic vers le vert. Les vrais utilisateurs, eux, sont toujours sur le bleu.
+@show tests h1
+@focus tests h1 green
+@flow h1
+L: Et c'est là qu'on teste ?
+R: Exactement. Le {hook} {After Allow Test Traffic} déclenche une fonction {Lambda} qui teste la nouvelle version à travers le {listener} de test. Si elle renvoie un échec, {CodeDeploy} fait un {rollback}, et aucun utilisateur n'a rien vu.
+@hide p1
+@show p2
+@focus lprod p2 green
+@flow p2
+R: Si les tests passent : {Before Allow Traffic}, puis {Allow Traffic}. Le {listener} de production bascule vers le vert, d'un coup, ou par paliers en {canary} ou {linear}.
+@unfocus
+L: Et le bleu ?
+R: Il reste là pendant le délai de terminaison. Tant qu'il existe, le {rollback} est instantané : on rebascule le {listener}.
+@slide flow L'ordre des hooks ECS
+BeforeInstall
+Install *
+AfterInstall
+AllowTestTraffic *
+!AfterAllowTestTraffic
+BeforeAllowTraffic
+AllowTraffic *
+AfterAllowTraffic
+> Pointillés : gérés par CodeDeploy · en orange : **les tests, avant le trafic réel**
+@end
+@all
+L: Récapitule l'ordre.
+R: {Before Install}, {Install}, {After Install}, {Allow Test Traffic}, {After Allow Test Traffic}, {Before Allow Traffic}, {Allow Traffic}, {After Allow Traffic}. Les {hooks} sont des fonctions {Lambda}, qui renvoient leur statut avec {Put Lifecycle Event Hook Execution Status}.
+@slide diagram Lambda : un alias, deux versions
+node alias 4 39 18 22 | Alias « live » | ce qu'appellent les clients | 🏷️ | service
+node v1 64 6 20 22 | Version 1 | actuelle | 🟦 | account
+node v2 64 72 20 22 | Version 2 | nouvelle | 🟩 | data
+node hook 4 74 22 22 | BeforeAllowTraffic | Lambda de test | ✅ | proactive
+arrow w1 alias v1 | 100 % | | service
+arrow h2 hook v2 | teste | dashed | proactive
+arrow w9 alias v1 | 90 % | | service
+arrow w10 alias v2 | 10 % | | data
+arrow w100 alias v2 | 100 % | | data
+@end
+@show alias v1 w1
+@flow w1
+L: Et sur {Lambda}, c'est différent ?
+R: Pas de {listener}, mais un alias. Les clients appellent l'alias {live}, qui pointe à cent pour cent sur la version un.
+@show v2 hook h2
+@focus hook h2 v2
+@flow h2
+R: {CodeDeploy} publie la version deux. Avant de lui donner du trafic, le {hook} {Before Allow Traffic} la teste. Sur {Lambda}, il n'y a que deux {hooks} : {Before Allow Traffic} et {After Allow Traffic}.
+@hide w1
+@show w9 w10
+@focus alias w9 w10 v1 v2
+@flow w9 w10
+R: Puis l'alias répartit le trafic. En {canary}, dix pour cent sur la version deux pendant quelques minutes, avec une alarme {CloudWatch} qui surveille les erreurs.
+@hide w9 w10
+@show w100
+@focus alias w100 v2
+@flow w100
+R: Si l'alarme ne se déclenche pas, cent pour cent. Sinon, {rollback} automatique vers la version un.
+@unfocus
+@slide quiz QUESTION
+Sur ECS, dans quel hook placer les tests de la nouvelle version, avant le trafic réel ?
+> **AfterAllowTestTraffic** — sur Lambda : **BeforeAllowTraffic**.
+@end
+L: Question. Sur {ECS}, dans quel {hook} places-tu les tests ?
+[pause 4]
+@answer
+R: {After Allow Test Traffic}. Et sur {Lambda}, {Before Allow Traffic}.
+@slide bullets À retenir
+ECS blue/green : **listener de test** + task set vert, tests dans **AfterAllowTestTraffic**
+Lambda : **alias pondéré**, tests dans **BeforeAllowTraffic**, canary + alarme + rollback
+Le bleu reste en place pendant le délai de terminaison → **rollback instantané**
+@end
+@+
+L: On résume.
+R: Sur {ECS}, un {listener} de test et les tests dans {After Allow Test Traffic}.
+@+
+R: Sur {Lambda}, un alias pondéré et les tests dans {Before Allow Traffic}.
+@+
+R: Et tant que l'ancienne version existe, le {rollback} est instantané. Le test se fait toujours avant le trafic réel.

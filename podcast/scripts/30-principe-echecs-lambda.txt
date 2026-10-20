@@ -1,0 +1,96 @@
+# Principe — Les échecs Lambda en schémas
+@slide title Quand une Lambda échoue
+Principe en schémas · Domaine 5
+Asynchrone, SQS, Kinesis : trois façons d'invoquer, trois façons de gérer l'échec
+@end
+L: Les échecs {Lambda}. Pourquoi trois schémas ?
+R: Parce que la bonne réponse dépend de la façon dont la {Lambda} est appelée. Asynchrone, depuis une file {SQS}, ou depuis un stream {Kinesis}. Et c'est exactement là que l'examen tend ses pièges.
+@slide diagram 1 · Invocation asynchrone (S3, SNS, EventBridge)
+node src 1 38 18 24 | S3 · SNS · EventBridge | invocation asynchrone | 📨 | user
+node q 25 38 18 24 | File interne Lambda | 2 retries par défaut | 🔁 | #6b7a93
+node fn 49 38 17 24 | Fonction Lambda | | λ | service
+node ok 73 4 26 24 | OnSuccess | SQS, SNS, Lambda, EventBridge | ✅ | data
+node ko 73 72 26 24 | OnFailure | avec le contexte de l'erreur | ❌ | prev
+arrow a1 src q | | | user
+arrow a2 q fn | | | service
+arrow a3 fn ok | succès | | data
+arrow a4 fn ko | échec après retries | | prev
+@end
+@show src q fn a1 a2
+@flow a1 a2
+L: Premier cas : {S3}, {SNS} ou {EventBridge} invoquent la {Lambda} en asynchrone.
+R: {Lambda} met l'événement dans une file interne, et réessaie deux fois en cas d'échec, par défaut.
+@show ko a4
+@focus fn a4 ko
+@flow a4
+R: Après les {retries}, l'événement part vers une {destination} {On Failure}, avec le contexte de l'erreur. C'est mieux qu'une {DLQ} {Lambda}, qui ne garde que l'événement.
+@show ok a3
+@focus fn a3 ok
+@flow a3
+R: Il existe aussi une {destination} {On Success}, pour enchaîner un traitement.
+@unfocus
+@slide diagram 2 · Lambda qui lit une file SQS
+node q 1 38 20 24 | File SQS | visibility timeout | 📬 | service
+node esm 27 38 18 24 | Event source mapping | batch de 10 | 🔗 | #6b7a93
+node fn 51 38 17 24 | Fonction Lambda | | λ | service
+node dlq 1 76 20 22 | DLQ de la file | après maxReceiveCount | 🪦 | prev
+node rbif 74 38 25 24 | ReportBatchItemFailures | ne rejoue que les échecs | 🎯 | proactive
+arrow b1 q esm | | | service
+arrow b2 esm fn | | | service
+arrow b3 fn rbif | | dashed | proactive
+arrow b4 q dlq | | | prev
+@end
+@show q esm fn b1 b2
+@flow b1 b2
+L: Deuxième cas : la {Lambda} lit une file {SQS}.
+R: C'est un {event source mapping} qui lit les messages par {batch}. Si un seul message échoue, tout le {batch} revient dans la file, et les messages réussis sont retraités.
+@show rbif b3
+@focus fn b3 rbif
+R: La solution : activer {Report Batch Item Failures}. La fonction renvoie les identifiants des messages en échec, et seuls ceux-là reviennent.
+@show dlq b4
+@focus q b4 dlq
+@flow b4
+R: Et la {DLQ} se configure sur la file {SQS}, pas sur la {Lambda}. Après {max receive count} tentatives, le message y part. Le piège classique : une {destination} {On Failure} ne marche pas ici.
+@unfocus
+@slide diagram 3 · Lambda qui lit Kinesis ou DynamoDB Streams
+node sh 1 38 20 24 | Shard Kinesis | ordre garanti | 🧵 | service
+node fn 27 38 17 24 | Fonction Lambda | | λ | service
+node bad 27 76 17 22 | Record corrompu | bloque le shard | 💥 | prev
+node bis 51 4 22 24 | BisectBatchOnFunctionError | coupe le batch en deux | ✂️ | proactive
+node max 51 38 22 24 | MaximumRetryAttempts | MaximumRecordAgeInSeconds | ⏱️ | proactive
+node of 79 38 20 24 | On-failure destination | SQS ou SNS | ❌ | detect
+arrow c1 sh fn | | | service
+arrow c2 bad fn | échec en boucle | dashed | prev
+arrow c3 fn bis | | | proactive
+arrow c4 fn max | | | proactive
+arrow c5 max of | record isolé | | detect
+@end
+@show sh fn c1 bad c2
+@flow c1 c2
+L: Troisième cas : un stream {Kinesis} ou {DynamoDB Streams}.
+R: Là, l'ordre est garanti par {shard}. Un seul {record} corrompu fait échouer le {batch} en boucle, et bloque tout le {shard}.
+@show bis c3
+@focus fn c3 bis
+R: {Bisect Batch On Function Error} coupe le {batch} en deux, encore et encore, pour isoler le {record} fautif.
+@show max c4 of c5
+@focus max c4 of c5
+@flow c4 c5
+R: {Maximum Retry Attempts} et {Maximum Record Age In Seconds} limitent les tentatives, et le {record} part vers une {on-failure destination}. Le {shard} repart.
+@unfocus
+@slide table En une image
+Invocation | En cas d'échec | Réglage
+Asynchrone (S3, SNS, EventBridge) | 2 retries | **Destinations** OnFailure / OnSuccess
+SQS (event source mapping) | tout le batch revient | **ReportBatchItemFailures** + **DLQ sur la file**
+Kinesis / DynamoDB Streams | le shard est bloqué | **Bisect** + retries max + on-failure destination
+@end
+@all
+L: Le tableau à retenir.
+R: Asynchrone : destinations. {SQS} : {Report Batch Item Failures} et la {DLQ} sur la file. {Kinesis} : {bisect}.
+@slide quiz QUESTION
+Une Lambda lit SQS par batch de 10. Un message en échec fait retraiter les 9 autres. Que faire ?
+> Activer **ReportBatchItemFailures** et renvoyer les IDs en échec (DLQ sur la file).
+@end
+L: Question. Un message en échec fait retraiter les neuf autres du {batch}.
+[pause 4]
+@answer
+R: {Report Batch Item Failures}.

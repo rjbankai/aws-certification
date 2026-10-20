@@ -1,0 +1,54 @@
+# Principe — S3 accessible uniquement depuis le VPC, en schémas
+@slide title S3, uniquement depuis le VPC
+Principe en schémas · Domaine 6
+Gateway endpoint, table de routage et bucket policy
+@end
+L: Un bucket {S3} qui ne doit être accessible que depuis notre {VPC}. Rémy, il faut combien de pièces ?
+R: Deux. Un chemin privé vers {S3}, et une porte côté bucket qui refuse tout le reste.
+@slide diagram Le chemin privé
+group vpc 1 4 52 92 | VPC | service
+node ec2 4 14 24 26 | Instance | subnet privé | 🖥️ | account
+node rt 4 62 24 28 | Table de routage | préfixe S3 → endpoint | 🧭 | #6b7a93
+node gwe 31 36 19 28 | Gateway endpoint | S3 · gratuit | 🚪 | detect
+node s3 62 36 22 28 | Bucket S3 | | 🪣 | data
+node bp 60 72 39 24 | Bucket policy | Deny si aws:SourceVpce ≠ vpce-123 | 📄 | prev
+node out 60 2 39 24 | Accès depuis Internet | refusé | ⛔ | prev
+arrow v1 ec2 gwe | | | account
+arrow v2 rt gwe | route | dashed | service
+arrow v3 gwe s3 | via l'endpoint | | data
+arrow v4 bp s3 | | dashed | prev
+arrow v5 out s3 | refusé | dashed | prev
+@end
+@show vpc ec2 s3
+L: L'instance est dans un subnet privé.
+@show gwe rt v1 v2 v3
+@focus ec2 v1 gwe v2 rt v3 s3
+@flow v1 v3
+R: Première pièce : un {gateway endpoint} {S3}. Il s'ajoute à la table de routage, et le trafic vers {S3} reste sur le réseau {AWS}, sans {NAT} ni Internet. Il est gratuit, et existe seulement pour {S3} et {DynamoDB}.
+@show bp v4
+@focus bp v4 s3
+R: Deuxième pièce : la {bucket policy}. Un {Deny} pour toute requête dont la condition {aws Source Vpce} n'est pas notre endpoint.
+@show out v5
+@focus out v5 s3
+@flow v5
+R: Résultat : même avec des identifiants valides, une requête qui vient d'Internet est refusée.
+@unfocus
+L: Et pour d'autres services que {S3} ?
+R: Des {interface endpoints}, avec {PrivateLink}. Payants, mais disponibles pour la plupart des services. Et on peut restreindre ce qui passe par un endpoint avec une {endpoint policy}.
+@slide cards Les conditions à reconnaître
+aws:SourceVpce :: Seulement via **ce VPC endpoint**
+aws:SourceVpc :: Seulement depuis **ce VPC**
+aws:PrincipalOrgID :: Seulement les comptes de **mon organisation**
+aws:SecureTransport :: **HTTPS obligatoire** (Deny si false)
+@end
+@all
+L: Les conditions de {bucket policy} à reconnaître ?
+R: {Source Vpce} pour un endpoint, {Source Vpc} pour un {VPC}, {Principal Org ID} pour l'organisation, et {Secure Transport} pour imposer {HTTPS}.
+@slide quiz QUESTION
+Les instances privées doivent accéder à S3 sans NAT, et le bucket doit refuser tout accès hors du VPC.
+> **Gateway endpoint S3** + **bucket policy** avec Deny si **aws:SourceVpce** différent.
+@end
+L: Question. Accès à {S3} sans {NAT}, et refus de tout accès hors du {VPC}.
+[pause 4]
+@answer
+R: Un {gateway endpoint} {S3}, et une {bucket policy} avec la condition {aws Source Vpce}.

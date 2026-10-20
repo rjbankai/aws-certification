@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #0b1220; --panel: #121c2f; --panel2: #18243b; --line: #24324d;
+    --text: #e8eef9; --muted: #8a9bb8; --accent: #ff9f1c; --accent2: #2ec4b6;
+    --lea: #2ec4b6; --remy: #ff9f1c; --good: #5ad17a; --warn: #ff6b6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Segoe UI Variable", Arial, sans-serif; overflow: hidden; }
+  body {
+    background-image:
+      radial-gradient(1200px 600px at 85% -10%, rgba(255,159,28,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(46,196,182,.10), transparent 60%),
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+  }
+  .top { position: absolute; top: 40px; left: 80px; right: 80px; display: flex;
+    justify-content: space-between; align-items: center; color: var(--muted); font-size: 26px; letter-spacing: .5px; }
+  .tag { color: var(--accent); font-weight: 600; }
+  .stage { position: absolute; top: 110px; left: 80px; right: 80px; height: 700px; }
+  h1 { font-size: 64px; font-weight: 700; line-height: 1.1; margin-bottom: 36px; }
+  h1 .hl { color: var(--accent); }
+
+  /* titre */
+  .title-slide { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  .title-slide .kicker { color: var(--accent); font-size: 34px; font-weight: 600; margin-bottom: 20px; letter-spacing: 1px; }
+  .title-slide h1 { font-size: 96px; }
+  .title-slide .sub { color: var(--muted); font-size: 40px; }
+
+  /* puces */
+  ul.bullets { list-style: none; display: flex; flex-direction: column; gap: 22px; }
+  ul.bullets li { font-size: 40px; line-height: 1.3; padding: 18px 28px 18px 72px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 18px; position: relative; }
+  ul.bullets li::before { content: ""; position: absolute; left: 30px; top: 50%; width: 18px; height: 18px;
+    margin-top: -9px; border-radius: 50%; background: var(--accent); }
+  ul.bullets li.dense { font-size: 34px; padding-top: 14px; padding-bottom: 14px; }
+
+  /* flux */
+  .flow { display: flex; flex-wrap: wrap; gap: 26px 0; align-items: center; }
+  .step { display: flex; align-items: center; }
+  .box { font-size: 32px; font-weight: 600; padding: 22px 26px; border-radius: 16px; background: var(--panel2);
+    border: 2px solid var(--accent2); min-width: 150px; text-align: center; line-height: 1.2; }
+  .box.muted { border-style: dashed; border-color: var(--line); color: var(--muted); background: transparent; }
+  .box.hot { border-color: var(--accent); background: rgba(255,159,28,.14); box-shadow: 0 0 0 6px rgba(255,159,28,.12); }
+  .box small { display: block; font-size: 22px; font-weight: 400; color: var(--muted); margin-top: 6px; }
+  .arrow { width: 54px; height: 4px; background: var(--line); position: relative; margin: 0 6px; }
+  .arrow::after { content: ""; position: absolute; right: -2px; top: -8px; border-left: 16px solid var(--line);
+    border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+  .legend { margin-top: 34px; font-size: 28px; color: var(--muted); }
+
+  /* cartes */
+  .cards { display: grid; gap: 26px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 30px 32px;
+    border-top: 6px solid var(--accent2); }
+  .card:nth-child(4n+2) { border-top-color: var(--accent); }
+  .card:nth-child(4n+3) { border-top-color: #9b8cff; }
+  .card:nth-child(4n+4) { border-top-color: #ff6b9a; }
+  .card h3 { font-size: 38px; margin-bottom: 14px; }
+  .card p { font-size: 29px; color: #c5d1e6; line-height: 1.35; }
+
+  /* tableau */
+  table { width: 100%; border-collapse: separate; border-spacing: 0 12px; font-size: 32px; }
+  th { text-align: left; color: var(--accent); font-weight: 600; padding: 0 24px 4px; font-size: 28px;
+    text-transform: uppercase; letter-spacing: 1px; }
+  td { background: var(--panel); padding: 18px 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  td:first-child { border-left: 1px solid var(--line); border-radius: 14px 0 0 14px; font-weight: 600; }
+  td:last-child { border-right: 1px solid var(--line); border-radius: 0 14px 14px 0; }
+  table.dense { font-size: 28px; border-spacing: 0 8px; }
+  table.dense td { padding: 12px 20px; }
+
+  /* quiz */
+  .quiz { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+  .quiz .label { color: var(--accent); font-size: 34px; font-weight: 700; letter-spacing: 2px; margin-bottom: 26px; }
+  .quiz .q { font-size: 54px; line-height: 1.25; font-weight: 600; max-width: 1600px; }
+  .quiz .a { margin-top: 48px; font-size: 46px; padding: 28px 36px; border-radius: 20px; background: rgba(90,209,122,.12);
+    border: 2px solid var(--good); color: #dff7e6; max-width: 1600px; }
+  .quiz .a b { color: var(--good); }
+  .timer { position: absolute; right: 0; top: 0; width: 170px; height: 170px; }
+  .timer .n { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 64px; font-weight: 700; color: var(--accent); }
+
+  /* sous-titres */
+  .subs { position: absolute; left: 80px; right: 80px; bottom: 44px; min-height: 150px; display: flex; gap: 26px;
+    align-items: center; background: rgba(8,13,24,.82); border: 1px solid var(--line); border-radius: 22px; padding: 22px 30px; }
+  .who { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 120px; }
+  .avatar { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 36px; font-weight: 700; color: #0b1220; }
+  .who span { font-size: 24px; color: var(--muted); }
+  .subs .txt { font-size: 33px; line-height: 1.35; }
+  .subs.L .avatar { background: var(--lea); }
+  .subs.R .avatar { background: var(--remy); }
+  .subs.E .avatar { background: #9b8cff; }
+  .subs.silent { opacity: 0; }
+
+  .hidden { visibility: hidden; }
+  .progress { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--accent); }
+
+  /* schémas : conteneurs, boîtes, flèches */
+  .dg { position: relative; width: 100%; height: 560px; }
+  .dg .el { position: absolute; transition: none; }
+  .dg .el.off { opacity: 0; }
+  .dg.focusing .el.nd.on:not(.focus) { opacity: .22; }
+  .dg.focusing .el.grp.on:not(.focus) { opacity: .55; }
+  .dg .grp { border: 2.5px dashed var(--c); border-radius: 22px; background: color-mix(in srgb, var(--c) 7%, transparent); }
+  .dg .grp > .gl { position: absolute; top: -18px; left: 22px; padding: 2px 14px; border-radius: 99px; font-size: 22px; font-weight: 700;
+    letter-spacing: .5px; background: var(--bg); color: var(--c); border: 2px solid var(--c); white-space: nowrap; }
+  .dg .nd { display: flex; align-items: center; gap: 16px; padding: 12px 18px; border-radius: 16px; background: var(--panel2);
+    border: 2px solid color-mix(in srgb, var(--c) 55%, var(--line)); border-left: 10px solid var(--c); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .dg .nd .ic { font-size: 40px; line-height: 1; flex: none; }
+  .dg .nd .tx { min-width: 0; overflow-wrap: anywhere; }
+  .dg .nd b { display: block; font-size: 27px; line-height: 1.15; }
+  .dg .nd small { display: block; font-size: 19px; color: var(--muted); line-height: 1.25; margin-top: 4px; }
+  .dg .focus.nd { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 45%, transparent), 0 10px 30px rgba(0,0,0,.35); }
+  .dg .focus.grp { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 30%, transparent); }
+  .dg svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .dg .arr path { fill: none; stroke: var(--c); stroke-width: 4; }
+  .dg .arr.dashed path { stroke-dasharray: 12 9; }
+  .dg .arr text { font: 600 20px "Segoe UI", sans-serif; fill: var(--text); }
+  .dg .arr rect { fill: var(--bg); stroke: var(--c); stroke-width: 1.5; }
+  .dg .dot { fill: #fff; filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 4px var(--accent)); }
+</style>
+</head>
+<body>
+  <div class="top"><div class="tag" id="tag"></div><div id="ep"></div></div>
+  <div class="stage" id="stage"></div>
+  <div class="subs" id="subs"><div class="who"><div class="avatar" id="av"></div><span id="name"></span></div><div class="txt" id="txt"></div></div>
+  <div class="progress" id="progress"></div>
+<script>
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+// **gras** → surlignage orange
+const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<span style="color:var(--accent);font-weight:700">$1</span>');
+const vis = (i, n) => i < n ? "" : " hidden";
+
+// ---------- schémas ----------
+const COLORS = { org: "#ff9f1c", ou: "#a98bff", account: "#2ec4b6", service: "#5aa2ff", prev: "#ff6b62",
+  detect: "#ffd166", proactive: "#4fd18b", user: "#ff6b9a", data: "#9ccc4a" };
+const col = c => COLORS[c] || c || COLORS.service;
+function parseDiagram(sp) {
+  return sp.body.map(line => {
+    const [head, ...f] = line.split("|").map(x => x.trim());
+    const [kind, id, ...a] = head.split(/\s+/);
+    if (kind === "arrow") return { kind, id, from: a[0], to: a[1], label: f[0] || "", dashed: (f[1] || "").includes("dashed"), color: f[2] };
+    const [x, y, w, h] = a.map(Number);
+    return kind === "group" ? { kind, id, x, y, w, h, label: f[0] || "", color: f[1] || "org" }
+      : { kind, id, x, y, w, h, label: f[0] || "", sub: f[1] || "", icon: f[2] || "", color: f[3] || "service" };
+  });
+}
+function diagramHTML(sp) {
+  return `<div class="dg" id="dg">` + parseDiagram(sp).filter(e => e.kind !== "arrow").map(e => {
+    const pos = `left:${e.x}%;top:${e.y}%;width:${e.w}%;height:${e.h}%;--c:${col(e.color)}`;
+    return e.kind === "group"
+      ? `<div class="el grp" data-id="${e.id}" style="${pos}"><span class="gl">${fmt(e.label)}</span></div>`
+      : `<div class="el nd" data-id="${e.id}" style="${pos}">${e.icon ? `<span class="ic">${e.icon}</span>` : ""}<div class="tx"><b>${fmt(e.label)}</b>${e.sub ? `<small>${fmt(e.sub)}</small>` : ""}</div></div>`;
+  }).join("") + `<svg id="dgsvg"></svg></div>`;
+}
+// point d'intersection entre le segment centre→cible et le bord du rectangle
+function edge(r, tx, ty) {
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2, dx = tx - cx, dy = ty - cy;
+  const s = Math.min(Math.abs((r.w / 2 + 6) / (dx || 1e-9)), Math.abs((r.h / 2 + 6) / (dy || 1e-9)));
+  return [cx + dx * s, cy + dy * s];
+}
+function drawDiagram(sp, s) {
+  const dg = document.getElementById("dg"); if (!dg) return;
+  const vis = new Set(s.vis || []), foc = new Set(s.focus || []);
+  dg.classList.toggle("focusing", foc.size > 0);
+  dg.querySelectorAll(".el").forEach(el => {
+    const on = vis.has(el.dataset.id);
+    el.classList.toggle("on", on); el.classList.toggle("off", !on); el.classList.toggle("focus", foc.has(el.dataset.id));
+  });
+  const box = dg.getBoundingClientRect();
+  const rect = id => { const el = dg.querySelector(`[data-id="${id}"]`); if (!el) return null; const r = el.getBoundingClientRect();
+    return { x: r.left - box.left, y: r.top - box.top, w: r.width, h: r.height }; };
+  let svg = `<defs>${Object.entries(COLORS).map(([k, c]) => `<marker id="m-${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`).join("")}</defs>`;
+  for (const a of parseDiagram(sp).filter(e => e.kind === "arrow")) {
+    const A = rect(a.from), B = rect(a.to);
+    if (!A || !B || !vis.has(a.id)) continue;
+    const ck = COLORS[a.color] ? a.color : "service", c = col(a.color);
+    const [x1, y1] = edge(A, B.x + B.w / 2, B.y + B.h / 2), [x2, y2] = edge(B, A.x + A.w / 2, A.y + A.h / 2);
+    const dim = foc.size && !(foc.has(a.id) || (foc.has(a.from) && foc.has(a.to)));
+    let label = "";
+    if (a.label) {
+      // légende décalée à côté du trait : au-dessus d'une flèche horizontale, à droite d'une verticale
+      const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, w = a.label.length * 10.5 + 24;
+      let nx = -dy / len, ny = dx / len;
+      const horiz = Math.abs(dx) >= Math.abs(dy);
+      if ((horiz && ny > 0) || (!horiz && nx < 0)) { nx = -nx; ny = -ny; }
+      const off = horiz ? 26 : w / 2 + 12;
+      const mx = (x1 + x2) / 2 + nx * off, my = (y1 + y2) / 2 + ny * off;
+      label = `<rect x="${mx - w / 2}" y="${my - 17}" width="${w}" height="34" rx="17"/><text x="${mx}" y="${my + 7}" text-anchor="middle">${esc(a.label)}</text>`;
+    }
+    const fl = s.flow && s.flow.arrows.includes(a.id)
+      ? `<circle class="dot" r="11" cx="${x1 + (x2 - x1) * s.flow.t}" cy="${y1 + (y2 - y1) * s.flow.t}"/>` : "";
+    svg += `<g class="arr ${a.dashed ? "dashed" : ""}" style="--c:${c};opacity:${dim ? .2 : 1}"><path d="M${x1},${y1} L${x2},${y2}" marker-end="url(#m-${ck})"/>${label}${fl}</g>`;
+  }
+  document.getElementById("dgsvg").innerHTML = svg;
+}
+
+function slideHTML(sp, shown, answer, timer) {
+  const body = sp.body || [];
+  const title = sp.title ? `<h1>${fmt(sp.title)}</h1>` : "";
+  switch (sp.type) {
+    case "diagram": return title + diagramHTML(sp);
+    case "title": {
+      const [kicker, sub] = [body[0] || "", body[1] || ""];
+      return `<div class="title-slide"><div class="kicker">${fmt(kicker)}</div><h1>${fmt(sp.title)}</h1><div class="sub">${fmt(sub)}</div></div>`;
+    }
+    case "bullets": {
+      const dense = body.length > 5 ? " dense" : "";
+      return title + `<ul class="bullets">` + body.map((b, i) => `<li class="${dense}${vis(i, shown)}">${fmt(b)}</li>`).join("") + `</ul>`;
+    }
+    case "flow": {
+      const legend = body.filter(b => b.startsWith("> "));
+      const steps = body.filter(b => !b.startsWith("> "));
+      const html = steps.map((s, i) => {
+        let cls = "box", t = s;
+        if (t.endsWith(" *")) { cls += " muted"; t = t.slice(0, -2); }
+        if (t.startsWith("!")) { cls += " hot"; t = t.slice(1); }
+        const [main, small] = t.split(" :: ");
+        const box = `<div class="${cls}">${fmt(main)}${small ? `<small>${fmt(small)}</small>` : ""}</div>`;
+        return `<div class="step${vis(i, shown)}">${i ? '<div class="arrow"></div>' : ""}${box}</div>`;
+      }).join("");
+      return title + `<div class="flow">${html}</div>` + legend.map(l => `<div class="legend${shown >= steps.length ? "" : " hidden"}">${fmt(l.slice(2))}</div>`).join("");
+    }
+    case "cards": {
+      const cols = body.length <= 3 ? body.length : (body.length === 4 ? 2 : 3);
+      return title + `<div class="cards" style="grid-template-columns:repeat(${cols},1fr)">` + body.map((c, i) => {
+        const [h, p] = c.split(" :: ");
+        return `<div class="card${vis(i, shown)}"><h3>${fmt(h)}</h3><p>${fmt(p || "")}</p></div>`;
+      }).join("") + `</div>`;
+    }
+    case "table": {
+      const rows = body.map(r => r.split("|").map(c => c.trim()));
+      const dense = rows.length > 6 ? ' class="dense"' : "";
+      return title + `<table${dense}><tr>${rows[0].map(h => `<th>${fmt(h)}</th>`).join("")}</tr>` +
+        rows.slice(1).map((r, i) => `<tr class="${vis(i, shown).trim()}">${r.map(c => `<td>${fmt(c)}</td>`).join("")}</tr>`).join("") + `</table>`;
+    }
+    case "quiz": {
+      const q = body.filter(b => !b.startsWith("> ")).join(" ");
+      const a = body.filter(b => b.startsWith("> ")).map(b => b.slice(2)).join(" ");
+      let t = "";
+      if (timer != null) {
+        const frac = timer.left / timer.total, r = 70, c = 2 * Math.PI * r;
+        t = `<div class="timer"><svg width="170" height="170"><circle cx="85" cy="85" r="${r}" stroke="#24324d" stroke-width="12" fill="none"/>
+             <circle cx="85" cy="85" r="${r}" stroke="#ff9f1c" stroke-width="12" fill="none" stroke-linecap="round"
+             stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - frac)}" transform="rotate(-90 85 85)"/></svg><div class="n">${timer.left}</div></div>`;
+      }
+      return `<div class="quiz">${t}<div class="label">${esc(sp.title || "À TOI DE JOUER")}</div><div class="q">${fmt(q)}</div>` +
+        `<div class="a${answer ? "" : " hidden"}"><b>Réponse :</b> ${fmt(a)}</div></div>`;
+    }
+  }
+  return title;
+}
+
+window.render = function (s) {
+  document.getElementById("tag").textContent = s.tag || "";
+  document.getElementById("ep").textContent = s.ep || "";
+  document.getElementById("stage").innerHTML = s.slide ? slideHTML(s.slide, s.shown, s.answer, s.timer) : "";
+  if (s.slide && s.slide.type === "diagram") drawDiagram(s.slide, s);
+  const subs = document.getElementById("subs");
+  subs.className = "subs " + (s.speaker || "silent");
+  document.getElementById("av").textContent = s.speaker === "L" ? "L" : s.speaker === "R" ? "R" : "EN";
+  document.getElementById("name").textContent = s.speaker === "L" ? "Léa" : s.speaker === "R" ? "Rémy" : "Exam";
+  document.getElementById("txt").textContent = s.text || "";
+  document.getElementById("progress").style.width = (100 * (s.progress || 0)) + "%";
+};
+</script>
+</body>
+</html>

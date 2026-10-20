@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vigie.cloud/schemas/dop-c02-questions/1.1.0",
+  "title": "Banque de questions DOP-C02",
+  "type": "object",
+  "required": [
+    "meta",
+    "themes",
+    "questions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "themeId": {
+      "enum": [
+        "sdlc_automation",
+        "config_management_iac",
+        "resilient_cloud_solutions",
+        "monitoring_logging",
+        "incident_event_response",
+        "security_compliance"
+      ]
+    },
+    "lettre": {
+      "type": "string",
+      "pattern": "^[A-F]$"
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "titre",
+        "examen",
+        "langue",
+        "version_schema",
+        "genere_le",
+        "nb_questions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "titre": {
+          "type": "string"
+        },
+        "examen": {
+          "const": "DOP-C02"
+        },
+        "langue": {
+          "type": "string",
+          "description": "Code langue ISO 639-1"
+        },
+        "version_schema": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "genere_le": {
+          "type": "string",
+          "format": "date"
+        },
+        "nb_questions": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "themes": {
+      "type": "array",
+      "description": "Référentiel des 6 domaines de l'examen, avec le nombre de questions par domaine.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "libelle",
+          "nb_questions"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/themeId"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "nb_questions": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "numero",
+          "lot",
+          "titre",
+          "theme",
+          "theme_libelle",
+          "statut",
+          "reponses",
+          "nb_reponses_attendues",
+          "reponse_note",
+          "solution",
+          "options_correctes",
+          "explication"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^Q\\d{3}$",
+            "description": "Identifiant stable, ex. Q042"
+          },
+          "numero": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numéro dans l'ordre du PDF source"
+          },
+          "lot": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "titre": {
+            "type": "string",
+            "description": "Résumé court de la question (sans le « (N réponses) »)"
+          },
+          "theme": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/themeId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id du domaine ; null si l'énoncé est tronqué"
+          },
+          "theme_libelle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "statut": {
+            "enum": [
+              "complete",
+              "reconstituee",
+              "non_traitable"
+            ],
+            "description": "complete = réponse fiable ; reconstituee = déduite, à confirmer ; non_traitable = énoncé incomplet"
+          },
+          "reponses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/lettre"
+            },
+            "uniqueItems": true,
+            "description": "Lettres correctes ; liste vide si non traitable"
+          },
+          "nb_reponses_attendues": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "reponse_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Précision accolée à la réponse dans la source"
+          },
+          "solution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Description de la bonne réponse (questions à réponse unique, ou note pour les tronquées)"
+          },
+          "options_correctes": {
+            "type": "array",
+            "description": "Texte de chaque option correcte (questions à réponses multiples)",
+            "items": {
+              "type": "object",
+              "required": [
+                "lettre",
+                "texte"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "lettre": {
+                  "$ref": "#/$defs/lettre"
+                },
+                "texte": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "explication": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pourquoi c'est la bonne réponse et pourquoi les autres sont fausses"
+          },
+          "enonce": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Énoncé complet de la question (optionnel)"
+          },
+          "options": {
+            "type": "array",
+            "description": "Toutes les options proposées, dans l'ordre (optionnel ; requis pour le mode QCM)",
+            "items": {
+              "type": "object",
+              "required": [
+                "lettre",
+                "texte"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "lettre": {
+                  "$ref": "#/$defs/lettre"
+                },
+                "texte": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "description": "Version 1.1 : ajoute deux champs optionnels par question, 'enonce' (texte complet) et 'options' (toutes les options A-F), nécessaires pour un QCM corrigé automatiquement. Un fichier conforme à la 1.0 reste valide."
+}

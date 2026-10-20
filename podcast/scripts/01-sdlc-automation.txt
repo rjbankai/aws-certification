@@ -1,115 +1,393 @@
 # Épisode 1 — SDLC Automation (22 %)
-L: Épisode un. SDLC Automation, vingt-deux pour cent de l'examen, le plus gros domaine. Rémy, quel est l'angle des questions ici ?
-R: Presque toujours le même : quelle est la solution la plus automatisée, avec le moins d'overhead opérationnel, qui respecte la contrainte du scénario. On va parcourir la chaîne dans l'ordre : le code source, le build, les dépendances, le déploiement, le pipeline, et les stratégies de déploiement.
-L: On commence par le code source. CodeCommit.
-R: C'est du Git managé, chiffré au repos avec KMS et en transit. Pour s'authentifier : des identifiants Git HTTPS générés par IAM, des clés SSH, ou git remote codecommit, qui est recommandé quand on utilise le SSO ou des rôles.
-L: Et le piège classique de CodeCommit ?
-R: La protection de branche. CodeCommit n'a pas de fonctionnalité native pour protéger la branche main. Si on te demande d'empêcher les développeurs de pousser directement sur main, la réponse est une politique IAM avec un Deny sur GitPush et DeleteBranch, et une condition codecommit References qui cible refs heads main.
-L: Donc ce n'est pas un réglage dans CodeCommit, c'est de l'IAM.
-R: Exactement. Et pour forcer un nombre minimum d'approbateurs sur les pull requests, ce sont les approval rule templates. Pour les notifications, on préfère EventBridge, plus riche que les anciens triggers SNS ou Lambda.
-L: Passons au build. CodeBuild.
-R: Le fichier de référence, c'est le buildspec point yml, à la racine du dépôt. Il a quatre phases, dans l'ordre : install, pre build, build, post build. Puis les sections artifacts, cache et reports.
+@slide title SDLC Automation
+Épisode 1 · Domaine 1
+22 % de l'examen — le plus gros domaine
+@end
+L: Épisode un. {SDLC Automation}, vingt-deux pour cent de l'examen, le plus gros domaine. Rémy, quel est l'angle des questions ici ?
+@slide flow La chaîne CI/CD sur AWS
+CodeCommit :: code source
+CodeBuild :: build et tests
+CodeArtifact :: dépendances
+CodeDeploy :: déploiement
+> **CodePipeline** orchestre toute la chaîne · Question type : « le moins d'**operational overhead** »
+@end
+@all
+R: Presque toujours le même : quelle est la solution la plus automatisée, avec le moins d'{overhead} opérationnel, qui respecte la contrainte du scénario. On va parcourir la chaîne dans l'ordre : le code source, le build, les dépendances, le déploiement, le pipeline, et les stratégies de déploiement.
+@slide bullets CodeCommit
+Git managé, chiffré au repos (KMS) et en transit
+Auth : identifiants Git HTTPS (IAM), clés SSH, git-remote-codecommit (SSO / rôles)
+**Pas de protection de branche native** → politique IAM Deny + condition codecommit:References
+Approval rule templates : N approbateurs sur les pull requests
+Notifications : EventBridge (plutôt que les anciens triggers SNS / Lambda)
+@end
+L: On commence par le code source. {CodeCommit}.
+@+2
+R: C'est du Git managé, chiffré au repos avec {KMS} et en transit. Pour s'authentifier : des identifiants Git {HTTPS} générés par {IAM}, des clés {SSH}, ou {git remote codecommit}, qui est recommandé quand on utilise le {SSO} ou des rôles.
+L: Et le piège classique de {CodeCommit} ?
+@+
+R: La protection de branche. {CodeCommit} n'a pas de fonctionnalité native pour protéger la branche {main}. Si on te demande d'empêcher les développeurs de pousser directement sur {main}, la réponse est une politique {IAM} avec un {Deny} sur {GitPush} et {DeleteBranch}, et une condition {codecommit References} qui cible {refs heads main}.
+L: Donc ce n'est pas un réglage dans {CodeCommit}, c'est de l'{IAM}.
+@+2
+R: Exactement. Et pour forcer un nombre minimum d'approbateurs sur les {pull requests}, ce sont les {approval rule templates}. Pour les notifications, on préfère {EventBridge}, plus riche que les anciens {triggers} {SNS} ou {Lambda}.
+@slide flow buildspec.yml — les 4 phases
+install
+pre_build
+build
+post_build
+> Puis les sections **artifacts**, **cache** et **reports** · fichier à la **racine** du dépôt
+@end
+L: Passons au build. {CodeBuild}.
+@all
+R: Le fichier de référence, c'est le {buildspec} point {yml}, à la racine du dépôt. Il a quatre phases, dans l'ordre : {install}, {pre build}, {build}, {post build}. Puis les sections {artifacts}, {cache} et {reports}.
+@slide bullets CodeBuild — à retenir
+Secrets : **parameter-store:** ou **secrets-manager:** dans la section env, jamais en clair
+Accès à une ressource privée → projet dans le VPC, subnets **privés + NAT** (ou VPC endpoints)
+Cache S3 (partagé) ou local : docker layer, source, custom (plus rapide, pas garanti)
+Reports (JUnit XML, Cucumber JSON) · batch builds (matrice, en parallèle)
+Construire des images Docker → mode **privileged**
+@end
 L: Les secrets dans un build, comment on les gère ?
-R: Jamais en clair dans les variables d'environnement. Dans la section env du buildspec, tu utilises parameter-store pour SSM, ou secrets-manager. CodeBuild va chercher la valeur au moment du build.
-L: Et si le build doit accéder à une base RDS dans un subnet privé ?
-R: Il faut configurer CodeBuild dans le VPC. Et attention : il faut des subnets privés avec une NAT gateway, ou des VPC endpoints, sinon le build ne peut plus joindre S3, CloudWatch ou ECR.
+@+
+R: Jamais en clair dans les variables d'environnement. Dans la section {env} du {buildspec}, tu utilises {parameter-store} pour {SSM}, ou {secrets-manager}. {CodeBuild} va chercher la valeur au moment du build.
+L: Et si le build doit accéder à une base {RDS} dans un subnet privé ?
+@+
+R: Il faut configurer {CodeBuild} dans le {VPC}. Et attention : il faut des subnets privés avec une {NAT gateway}, ou des {VPC endpoints}, sinon le build ne peut plus joindre {S3}, {CloudWatch} ou {ECR}.
 L: Le cache ?
-R: Deux types. Le cache S3, partagé entre les builds. Et le cache local, avec trois modes : docker layer, source, ou custom. Le local est plus rapide, mais pas garanti, puisqu'il dépend du même hôte.
-L: Question rapide. Un build CodeBuild doit construire une image Docker et échoue. Qu'est-ce qu'il manque probablement ?
+@+
+R: Deux types. Le cache {S3}, partagé entre les builds. Et le cache local, avec trois modes : {docker layer}, {source}, ou {custom}. Le local est plus rapide, mais pas garanti, puisqu'il dépend du même hôte.
+@slide quiz QUESTION RAPIDE
+Un build CodeBuild doit construire une image Docker et échoue. Qu'est-ce qui manque ?
+> le mode **privileged** du projet CodeBuild.
+@end
+L: Question rapide. Un build {CodeBuild} doit construire une image {Docker} et échoue. Qu'est-ce qu'il manque probablement ?
 [pause 4]
-R: Le mode privileged. Sans lui, CodeBuild ne peut pas builder d'images Docker.
-L: Dernières choses sur CodeBuild ?
-R: Les reports, pour voir les résultats de tests dans la console, au format JUnit XML ou Cucumber JSON par exemple. Et les batch builds, pour lancer des builds en parallèle, en matrice, plusieurs environnements ou plateformes, dans une seule action de pipeline.
-L: Ensuite, CodeArtifact et CodeGuru.
-R: CodeArtifact, c'est un dépôt de packages : npm, pip, Maven, NuGet. Le concept clé, ce sont les upstream repositories : CodeArtifact sert de proxy vers npmjs ou PyPI, avec un cache. C'est la réponse à : comment centraliser et contrôler les dépendances tierces.
-L: Et CodeGuru, il y en a deux.
-R: CodeGuru Reviewer analyse le code sur les pull requests : bugs, fuites de secrets, ressources non fermées. CodeGuru Profiler analyse l'application en production : CPU, mémoire, et quelles lignes coûtent cher. Moyen mnémotechnique : Reviewer avant le merge, Profiler en production.
-L: On arrive au gros morceau : CodeDeploy.
-R: CodeDeploy déploie sur trois plateformes : EC2 ou on-premises, Lambda, et ECS. Dans les trois cas, il y a un fichier appspec. Sur EC2, il contient une section files pour copier les fichiers, et une section hooks pour les scripts. Sur Lambda, il décrit le passage de la version actuelle à la version cible de l'alias. Sur ECS, la task definition, le nom et le port du conteneur.
-L: Et l'agent CodeDeploy ?
-R: Uniquement sur EC2 et on-premises. Pas pour Lambda ni ECS.
-L: Les hooks. C'est la partie à connaître par cœur.
-R: Oui. Sur EC2, en déploiement in-place, l'ordre est : Application Stop, Download Bundle, Before Install, Install, After Install, Application Start, Validate Service. Je répète : Stop, Download, Before Install, Install, After Install, Start, Validate.
-L: Et avec un load balancer ?
-R: On ajoute au début Before Block Traffic, Block Traffic, After Block Traffic. Et à la fin Before Allow Traffic, Allow Traffic, After Allow Traffic. Attention : Download Bundle, Install, Block Traffic et Allow Traffic ne sont pas scriptables. C'est l'agent qui les gère.
-L: Et pour Lambda ?
-R: Très court. Before Allow Traffic, Allow Traffic, After Allow Traffic. Seulement deux hooks scriptables, le before et le after. Pas de phase install.
-L: Pour ECS ?
-R: Before Install, Install, After Install, puis Allow Test Traffic, After Allow Test Traffic, puis Before Allow Traffic, Allow Traffic, After Allow Traffic. Le point important, c'est qu'ECS a une phase de trafic de test.
-L: Question. Sur ECS, dans quel hook tu places tes tests de validation, pour tester la nouvelle version avant d'envoyer le vrai trafic ?
+@answer
+R: Le mode {privileged}. Sans lui, {CodeBuild} ne peut pas builder d'images {Docker}.
+@slide bullets CodeBuild — à retenir
+Secrets : **parameter-store:** ou **secrets-manager:** dans la section env, jamais en clair
+Accès à une ressource privée → projet dans le VPC, subnets **privés + NAT** (ou VPC endpoints)
+Cache S3 (partagé) ou local : docker layer, source, custom (plus rapide, pas garanti)
+Reports (JUnit XML, Cucumber JSON) · batch builds (matrice, en parallèle)
+Construire des images Docker → mode **privileged**
+@end
+@all
+L: Dernières choses sur {CodeBuild} ?
+R: Les {reports}, pour voir les résultats de tests dans la console, au format {JUnit XML} ou {Cucumber JSON} par exemple. Et les {batch builds}, pour lancer des builds en parallèle, en matrice, plusieurs environnements ou plateformes, dans une seule action de pipeline.
+@slide cards CodeArtifact et CodeGuru
+CodeArtifact :: Dépôt de packages npm, pip, Maven, NuGet. **Upstream repositories** = proxy + cache vers npmjs / PyPI
+CodeGuru Reviewer :: Analyse le code des pull requests : bugs, secrets, ressources non fermées. **Avant le merge**
+CodeGuru Profiler :: Profiling CPU / mémoire de l'application. **En production**
+@end
+L: Ensuite, {CodeArtifact} et {CodeGuru}.
+@+
+R: {CodeArtifact}, c'est un dépôt de packages : {npm}, {pip}, {Maven}, {NuGet}. Le concept clé, ce sont les {upstream repositories} : {CodeArtifact} sert de proxy vers {npmjs} ou {PyPI}, avec un cache. C'est la réponse à : comment centraliser et contrôler les dépendances tierces.
+L: Et {CodeGuru}, il y en a deux.
+@+2
+R: {CodeGuru Reviewer} analyse le code sur les {pull requests} : bugs, fuites de secrets, ressources non fermées. {CodeGuru Profiler} analyse l'application en production : {CPU}, mémoire, et quelles lignes coûtent cher. Moyen mnémotechnique : {Reviewer} avant le {merge}, {Profiler} en production.
+@slide table CodeDeploy — trois plateformes
+Plateforme | appspec contient | Agent CodeDeploy
+EC2 / on-premises | files (copie) + hooks (scripts) | Oui
+Lambda | alias : CurrentVersion → TargetVersion | Non
+ECS | task definition, nom et port du conteneur | Non
+@end
+L: On arrive au gros morceau : {CodeDeploy}.
+@all
+R: {CodeDeploy} déploie sur trois plateformes : {EC2} ou {on-premises}, {Lambda}, et {ECS}. Dans les trois cas, il y a un fichier {appspec}. Sur {EC2}, il contient une section {files} pour copier les fichiers, et une section {hooks} pour les scripts. Sur {Lambda}, il décrit le passage de la version actuelle à la version cible de l'alias. Sur {ECS}, la {task definition}, le nom et le port du conteneur.
+L: Et l'agent {CodeDeploy} ?
+R: Uniquement sur {EC2} et {on-premises}. Pas pour {Lambda} ni {ECS}.
+@slide flow Hooks EC2 — déploiement in-place
+ApplicationStop
+DownloadBundle *
+BeforeInstall
+Install *
+AfterInstall
+ApplicationStart
+ValidateService
+> En pointillés : **non scriptable**, géré par l'agent
+@end
+L: Les {hooks}. C'est la partie à connaître par cœur.
+@all
+R: Oui. Sur {EC2}, en déploiement {in-place}, l'ordre est : {Application Stop, Download Bundle, Before Install, Install, After Install, Application Start, Validate Service}. Je répète : {Stop}, {Download}, {Before Install, Install, After Install}, {Start}, {Validate}.
+@slide flow Avec un load balancer
+BeforeBlockTraffic
+BlockTraffic *
+AfterBlockTraffic
+… déploiement … *
+BeforeAllowTraffic
+AllowTraffic *
+AfterAllowTraffic
+> Non scriptables : **DownloadBundle, Install, BlockTraffic, AllowTraffic**
+@end
+L: Et avec un {load balancer} ?
+@+3
+R: On ajoute au début {Before Block Traffic, Block Traffic, After Block Traffic}.
+@all
+R: Et à la fin {Before Allow Traffic, Allow Traffic, After Allow Traffic}. Attention : {Download Bundle, Install, Block Traffic} et {Allow Traffic} ne sont pas scriptables. C'est l'agent qui les gère.
+@slide flow Hooks Lambda
+!BeforeAllowTraffic
+AllowTraffic *
+AfterAllowTraffic
+> Seulement **2 hooks scriptables**, pas de phase Install · tests dans **BeforeAllowTraffic**
+@end
+L: Et pour {Lambda} ?
+@all
+R: Très court. {Before Allow Traffic, Allow Traffic, After Allow Traffic}. Seulement deux {hooks} scriptables, le {before} et le {after}. Pas de phase {install}.
+@slide flow Hooks ECS
+BeforeInstall
+Install *
+AfterInstall
+AllowTestTraffic *
+!AfterAllowTestTraffic
+BeforeAllowTraffic
+AllowTraffic *
+AfterAllowTraffic
+> ECS a une **phase de trafic de test** · tests dans **AfterAllowTestTraffic**
+@end
+L: Pour {ECS} ?
+@+3
+R: {Before Install, Install, After Install}, puis {Allow Test Traffic, After Allow Test Traffic}, puis {Before Allow Traffic, Allow Traffic, After Allow Traffic}.
+@all
+R: Le point important, c'est qu'{ECS} a une phase de trafic de test.
+@slide quiz QUESTION
+Sur ECS, dans quel hook places-tu les tests de validation, avant d'envoyer le vrai trafic ?
+> **AfterAllowTestTraffic** (ECS) · **BeforeAllowTraffic** (Lambda). Le test se fait toujours avant le trafic réel.
+@end
+L: Question. Sur {ECS}, dans quel {hook} tu places tes tests de validation, pour tester la nouvelle version avant d'envoyer le vrai trafic ?
 [pause 4]
-R: After Allow Test Traffic. Et pour Lambda, c'est Before Allow Traffic. Le mnémo : le test se fait toujours avant le trafic réel. Ces hooks sont des fonctions Lambda, et elles doivent renvoyer leur statut, succès ou échec, avec l'appel Put Lifecycle Event Hook Execution Status.
-L: Les deployment configurations, maintenant.
-R: Sur EC2 : One At A Time, Half At A Time, All At Once, ou une config custom avec un minimum d'hôtes sains, en pourcentage ou en nombre. Sur Lambda et ECS : des familles Canary, Linear et All At Once.
-L: La différence entre canary et linear ?
-R: Canary, c'est deux paliers. Par exemple dix pour cent pendant cinq minutes, puis cent pour cent. Linear, ce sont des incréments égaux répétés, par exemple dix pour cent toutes les minutes jusqu'à cent pour cent. Et ECS a moins de variantes que Lambda : canary dix pour cent cinq ou quinze minutes, linear dix pour cent toutes les une ou trois minutes, et all at once.
-L: Le rollback dans CodeDeploy ?
-R: Rollback automatique sur échec du déploiement, ou sur déclenchement d'une alarme CloudWatch. Mais il faut l'activer explicitement. Et attention, subtilité : un rollback, c'est en fait un nouveau déploiement de la dernière révision connue comme bonne. Ce n'est pas un retour en arrière magique.
-L: Et en blue/green sur EC2 ?
-R: CodeDeploy crée un nouvel Auto Scaling group. L'ancien est gardé pendant un délai, termination wait time in minutes. Pendant ce délai, tu peux faire un rollback instantané.
-L: Le dépannage CodeDeploy tombe souvent. Les causes classiques ?
-R: Un déploiement bloqué ou des instances en échec : l'agent CodeDeploy est absent ou arrêté, ou le profil d'instance n'a pas accès au bucket S3 qui contient les révisions. Le fichier appspec doit être à la racine du bundle. Un script trop long : timeout du hook, au maximum trois mille six cents secondes.
-L: Question piège. Le hook Application Stop échoue à chaque déploiement, en boucle. Pourquoi, et que faire ?
+@answer
+R: {After Allow Test Traffic}. Et pour {Lambda}, c'est {Before Allow Traffic}. Le mnémo : le test se fait toujours avant le trafic réel. Ces {hooks} sont des fonctions {Lambda}, et elles doivent renvoyer leur statut, succès ou échec, avec l'appel {Put Lifecycle Event Hook Execution Status}.
+@slide cards Deployment configurations
+EC2 / on-prem :: OneAtATime · HalfAtATime · AllAtOnce · ou custom (minimum d'hôtes sains, en % ou en nombre)
+Canary (Lambda, ECS) :: **2 paliers** : 10 % pendant N minutes, puis 100 %
+Linear (Lambda, ECS) :: **Paliers égaux répétés** : +10 % toutes les N minutes jusqu'à 100 %
+@end
+L: Les {deployment configurations}, maintenant.
+@+
+R: Sur {EC2} : {One At A Time, Half At A Time, All At Once}, ou une config {custom} avec un minimum d'hôtes sains, en pourcentage ou en nombre. Sur {Lambda} et {ECS} : des familles {Canary}, {Linear} et {All At Once}.
+L: La différence entre {canary} et {linear} ?
+@+2
+R: {Canary}, c'est deux paliers. Par exemple dix pour cent pendant cinq minutes, puis cent pour cent. {Linear}, ce sont des incréments égaux répétés, par exemple dix pour cent toutes les minutes jusqu'à cent pour cent. Et {ECS} a moins de variantes que {Lambda} : {canary} dix pour cent cinq ou quinze minutes, {linear} dix pour cent toutes les une ou trois minutes, et {all at once}.
+@slide bullets Rollback CodeDeploy
+Automatique sur **échec** du déploiement ou sur **alarme CloudWatch** — à activer explicitement
+Un rollback = un **nouveau déploiement** de la dernière révision connue bonne
+Blue/green EC2 : nouvel ASG, l'ancien est gardé pendant terminationWaitTimeInMinutes → rollback instantané
+@end
+L: Le {rollback} dans {CodeDeploy} ?
+@+
+R: {Rollback} automatique sur échec du déploiement, ou sur déclenchement d'une alarme {CloudWatch}. Mais il faut l'activer explicitement.
+@+
+R: Et attention, subtilité : un {rollback}, c'est en fait un nouveau déploiement de la dernière révision connue comme bonne. Ce n'est pas un retour en arrière magique.
+L: Et en {blue/green} sur {EC2} ?
+@+
+R: {CodeDeploy} crée un nouvel {Auto Scaling group}. L'ancien est gardé pendant un délai, {termination wait time in minutes}. Pendant ce délai, tu peux faire un {rollback} instantané.
+@slide bullets Dépannage CodeDeploy
+Agent CodeDeploy absent ou arrêté
+Instance profile sans accès au bucket S3 des révisions
+appspec.yml pas à la **racine** du bundle
+Script trop long → timeout du hook (max 3600 s)
+ApplicationStop échoue en boucle → **--ignore-application-stop-failures**
+@end
+L: Le dépannage {CodeDeploy} tombe souvent. Les causes classiques ?
+@+2
+R: Un déploiement bloqué ou des instances en échec : l'agent {CodeDeploy} est absent ou arrêté, ou le profil d'instance n'a pas accès au bucket {S3} qui contient les révisions.
+@+2
+R: Le fichier {appspec} doit être à la racine du {bundle}. Un script trop long : {timeout} du {hook}, au maximum trois mille six cents secondes.
+@slide quiz QUESTION PIÈGE
+Le hook ApplicationStop échoue à chaque déploiement, en boucle. Pourquoi, et que faire ?
+> Il exécute le script de l'**ancienne** révision → relancer avec **--ignore-application-stop-failures**.
+@end
+L: Question piège. Le {hook} {Application Stop} échoue à chaque déploiement, en boucle. Pourquoi, et que faire ?
 [pause 5]
-R: Application Stop exécute le script de l'ancienne révision, celle qui est déjà installée. Si ce script est cassé, chaque nouveau déploiement échoue. La solution : relancer avec l'option ignore application stop failures.
-L: On passe à CodePipeline.
-R: La structure : un pipeline contient des stages, qui contiennent des actions. Les types d'action : source, build, test, deploy, approval, invoke. Les actions s'exécutent en séquence ou en parallèle grâce au run order.
+@answer
+R: {Application Stop} exécute le script de l'ancienne révision, celle qui est déjà installée. Si ce script est cassé, chaque nouveau déploiement échoue. La solution : relancer avec l'option {ignore application stop failures}.
+@slide flow CodePipeline
+Source :: CodeCommit, S3, GitHub
+Build :: CodeBuild
+Test
+Approval :: manuelle + SNS
+Deploy :: CodeDeploy, CFN, ECS…
+> Pipeline → **stages** → **actions** · séquence ou parallèle avec **runOrder**
+@end
+L: On passe à {CodePipeline}.
+@all
+R: La structure : un pipeline contient des {stages}, qui contiennent des actions. Les types d'action : {source}, {build}, {test}, {deploy}, {approval}, {invoke}. Les actions s'exécutent en séquence ou en parallèle grâce au {run order}.
+@slide bullets CodePipeline — à retenir
+Artefacts dans un bucket S3 (artifact store), chiffrés KMS
+**Versioning obligatoire** sur le bucket d'une action **source S3** (pas sur l'artifact store)
+V2 : triggers filtrés (branches, chemins, tags, PR), variables, modes SUPERSEDED / QUEUED / PARALLEL, rollback de stage
+Détection : EventBridge (CodeCommit, S3) · GitHub via connexion CodeStar (webhook)
+Approval : SNS + codepipeline:PutApprovalResult · Invoke Lambda → PutJobSuccessResult / PutJobFailureResult
+@end
 L: Les artefacts ?
-R: Stockés dans un bucket S3, l'artifact store, chiffrés avec KMS. Et un piège : le versioning est obligatoire sur le bucket d'une action source S3. Pas sur l'artifact store, sur le bucket source.
-L: Qu'est-ce que les pipelines V2 apportent ?
-R: Des triggers avec filtres : branches, chemins de fichiers, tags Git, pull requests. Des variables au niveau du pipeline. Trois modes d'exécution : superseded, le défaut, queued, et parallel. Et le rollback de stage, manuel ou automatique en cas d'échec.
+@+2
+R: Stockés dans un bucket {S3}, l'{artifact store}, chiffrés avec {KMS}. Et un piège : le {versioning} est obligatoire sur le bucket d'une action {source} {S3}. Pas sur l'{artifact store}, sur le bucket source.
+L: Qu'est-ce que les pipelines {V2} apportent ?
+@+
+R: Des {triggers} avec filtres : branches, chemins de fichiers, {tags} {Git}, {pull requests}. Des variables au niveau du pipeline. Trois modes d'exécution : {superseded}, le défaut, {queued}, et {parallel}. Et le {rollback} de {stage}, manuel ou automatique en cas d'échec.
 L: Comment un pipeline détecte un changement de source ?
-R: Pour CodeCommit ou S3, par EventBridge. C'est recommandé, le polling est lent. Pour GitHub, par une connexion CodeStar, qui utilise un webhook.
+@+
+R: Pour {CodeCommit} ou {S3}, par {EventBridge}. C'est recommandé, le {polling} est lent. Pour {GitHub}, par une connexion {CodeStar}, qui utilise un {webhook}.
 L: L'approbation manuelle ?
-R: Une action de type approval, avec SNS pour notifier. La personne qui approuve a besoin de la permission codepipeline Put Approval Result.
+@+
+R: Une action de type {approval}, avec {SNS} pour notifier. La personne qui approuve a besoin de la permission {codepipeline Put Approval Result}.
 L: Et si on a besoin d'une étape qui n'existe pas nativement ?
-R: Une action invoke avec une Lambda. La Lambda doit absolument appeler Put Job Success Result ou Put Job Failure Result, sinon l'action reste en attente.
+R: Une action {invoke} avec une {Lambda}. La {Lambda} doit absolument appeler {Put Job Success Result} ou {Put Job Failure Result}, sinon l'action reste en attente.
+@slide cards Pipeline cross-compte — le trio
+1 · KMS CMK :: Customer managed key (la clé S3 par défaut ne marche pas) + key policy qui autorise le compte cible
+2 · Bucket policy :: Sur le bucket d'artefacts, autorise le rôle du compte cible
+3 · Rôle IAM :: Dans le compte cible, assumable par le compte du pipeline (roleArn sur l'action)
+@end
 L: Le grand classique : le pipeline cross-compte.
-R: Trois éléments, toujours les trois. Un : une clé KMS gérée par le client, une customer managed key. La clé S3 par défaut ne marche pas en cross-compte. Avec une key policy qui autorise le compte cible. Deux : une bucket policy sur le bucket d'artefacts qui autorise le rôle du compte cible. Trois : un rôle IAM dans le compte cible, que le compte du pipeline peut assumer.
-L: Donc le trio : CMK, bucket policy, rôle.
-R: Voilà. Et ne confonds pas avec le cross-région. En cross-région, il faut un bucket d'artefacts dans chaque région, et CodePipeline réplique tout seul.
+@+
+R: Trois éléments, toujours les trois. Un : une clé {KMS} gérée par le client, une {customer managed key}. La clé {S3} par défaut ne marche pas en cross-compte. Avec une {key policy} qui autorise le compte cible.
+@+
+R: Deux : une {bucket policy} sur le bucket d'artefacts qui autorise le rôle du compte cible.
+@+
+R: Trois : un rôle {IAM} dans le compte cible, que le compte du pipeline peut assumer.
+L: Donc le trio : {CMK}, {bucket policy}, rôle.
+R: Voilà. Et ne confonds pas avec le cross-région. En cross-région, il faut un bucket d'artefacts dans chaque région, et {CodePipeline} réplique tout seul.
+@slide table Stratégies de déploiement
+Stratégie | Downtime | Capacité / coût | Rollback
+All at once | Oui | tombe à 0 | redéploiement
+Rolling | Non | réduite | lent
+Rolling with additional batch | Non | maintenue, surcoût faible | lent
+Immutable | Non | maintenue, ASG temporaire (cher) | rapide
+Blue/green | Non | double | **instantané**
+Canary / Linear | Non | maintenue | rapide, blast radius limité
+@end
 L: Passons aux stratégies de déploiement. C'est très testé.
-R: Six stratégies. All at once : downtime, le plus rapide, pour le dev et le test. Rolling : pas de downtime mais capacité réduite, un batch est hors service. Rolling with additional batch : capacité maintenue, parce qu'on lance d'abord un batch supplémentaire, surcoût faible. Immutable : de nouvelles instances dans un Auto Scaling group temporaire, coût élevé, rollback rapide. Blue/green : deux environnements, rollback instantané. Et canary ou linear : on expose seulement une partie du trafic, pour réduire le blast radius.
-L: Question. Un client veut déployer en production sur Elastic Beanstalk, garder toute la capacité pendant le déploiement, avec un surcoût minimal. Quelle politique ?
+@+
+R: Six stratégies. {All at once} : {downtime}, le plus rapide, pour le dev et le test.
+@+
+R: {Rolling} : pas de {downtime} mais capacité réduite, un {batch} est hors service.
+@+
+R: {Rolling with additional batch} : capacité maintenue, parce qu'on lance d'abord un {batch} supplémentaire, surcoût faible.
+@+
+R: {Immutable} : de nouvelles instances dans un {Auto Scaling group} temporaire, coût élevé, {rollback} rapide.
+@+
+R: {Blue/green} : deux environnements, {rollback} instantané.
+@+
+R: Et {canary} ou {linear} : on expose seulement une partie du trafic, pour réduire le {blast radius}.
+@slide quiz QUESTION
+Elastic Beanstalk en production : garder toute la capacité pendant le déploiement, avec un surcoût minimal. Quelle politique ?
+> **Rolling with additional batch** : pleine capacité, un seul batch en plus.
+@end
+L: Question. Un client veut déployer en production sur {Elastic Beanstalk}, garder toute la capacité pendant le déploiement, avec un surcoût minimal. Quelle politique ?
 [pause 4]
-R: Rolling with additional batch. Pleine capacité, et seulement un batch en plus.
-L: Et si on veut le déploiement Elastic Beanstalk le plus sûr ?
-R: Immutable. Et si on veut tester sur un pourcentage du trafic réel : traffic splitting, c'est le canary d'Elastic Beanstalk.
-L: Et blue/green sur Elastic Beanstalk ?
-R: Attention, piège : blue/green n'est pas une politique de déploiement Elastic Beanstalk. C'est une action : on crée un deuxième environnement, puis on échange les URL avec Swap Environment CNAMEs.
+@answer
+R: {Rolling with additional batch}. Pleine capacité, et seulement un {batch} en plus.
+@slide bullets Pièges Elastic Beanstalk
+Le plus sûr : **Immutable** · Canary sur le trafic réel : **Traffic splitting**
+Blue/green **n'est pas une policy** → 2 environnements + SwapEnvironmentCNAMEs
+Seules **All at once** et **Rolling** réduisent la capacité
+Base RDS créée **dans** l'environnement = supprimée avec lui → la créer **en dehors**
+.ebextensions/*.config pour personnaliser · worker environment + cron.yaml (SQS)
+@end
+L: Et si on veut le déploiement {Elastic Beanstalk} le plus sûr ?
+@+
+R: {Immutable}. Et si on veut tester sur un pourcentage du trafic réel : {traffic splitting}, c'est le {canary} d'{Elastic Beanstalk}.
+L: Et {blue/green} sur {Elastic Beanstalk} ?
+@+
+R: Attention, piège : {blue/green} n'est pas une politique de déploiement {Elastic Beanstalk}. C'est une action : on crée un deuxième environnement, puis on échange les {URL} avec {Swap Environment CNAMEs}.
 L: Et quelles politiques réduisent la capacité ?
-R: Seulement deux : all at once et rolling. Les trois autres, rolling with additional batch, immutable et traffic splitting, la maintiennent.
-L: Un autre piège Elastic Beanstalk avec RDS ?
-R: Si tu crées la base RDS dans l'environnement Elastic Beanstalk, elle est supprimée quand tu supprimes l'environnement. Pour la production, ou pour du blue/green, la base doit être créée en dehors d'Elastic Beanstalk, et on passe la chaîne de connexion en variable d'environnement.
-L: Les autres éléments Elastic Beanstalk ?
-R: Le dossier point ebextensions, avec des fichiers point config, pour personnaliser la plateforme. Et le worker environment avec un fichier cron point yaml, pour les tâches périodiques et le traitement en arrière-plan via SQS.
-L: Et le déploiement sur ECS ?
-R: Soit un rolling natif, piloté par minimum healthy percent et maximum percent. Soit du blue/green avec CodeDeploy, qui utilise deux target groups et un listener de test.
-L: Et sur Lambda ?
-R: Les versions sont immuables, et un alias peut faire du weighted routing, par exemple dix pour cent du trafic sur la version deux. Avec SAM ou CloudFormation, on utilise Auto Publish Alias et Deployment Preference, avec le type canary ou linear, des alarmes, et des hooks.
-L: Un mot sur CloudFormation dans ce domaine ?
-R: On le détaille dans l'épisode suivant, mais retiens déjà ceci. Les change sets pour prévisualiser une mise à jour. Les stack policies pour interdire le remplacement d'une ressource critique comme une base. Deletion Policy, avec retain, snapshot ou delete, et Update Replace Policy pour protéger les données lors d'un remplacement. Creation Policy avec cfn signal pour attendre que les instances soient prêtes. Et Update Policy avec Auto Scaling Rolling Update pour mettre à jour un Auto Scaling group par lots.
+@+
+R: Seulement deux : {all at once} et {rolling}. Les trois autres, {rolling with additional batch}, {immutable} et {traffic splitting}, la maintiennent.
+L: Un autre piège {Elastic Beanstalk} avec {RDS} ?
+@+
+R: Si tu crées la base {RDS} dans l'environnement {Elastic Beanstalk}, elle est supprimée quand tu supprimes l'environnement. Pour la production, ou pour du {blue/green}, la base doit être créée en dehors d'{Elastic Beanstalk}, et on passe la chaîne de connexion en variable d'environnement.
+L: Les autres éléments {Elastic Beanstalk} ?
+@+
+R: Le dossier point {ebextensions}, avec des fichiers point {config}, pour personnaliser la plateforme. Et le {worker environment} avec un fichier {cron} point {yaml}, pour les tâches périodiques et le traitement en arrière-plan via {SQS}.
+@slide cards ECS et Lambda
+ECS :: Rolling natif (minimumHealthyPercent / maximumPercent) ou blue/green CodeDeploy : **2 target groups + listener de test**
+Lambda :: Versions immuables + **alias pondéré**. SAM : AutoPublishAlias + DeploymentPreference (Canary / Linear, Alarms, Hooks)
+@end
+L: Et le déploiement sur {ECS} ?
+@+
+R: Soit un {rolling} natif, piloté par {minimum healthy percent} et {maximum percent}. Soit du {blue/green} avec {CodeDeploy}, qui utilise deux {target groups} et un {listener} de test.
+L: Et sur {Lambda} ?
+@+
+R: Les versions sont immuables, et un alias peut faire du {weighted routing}, par exemple dix pour cent du trafic sur la version deux. Avec {SAM} ou {CloudFormation}, on utilise {Auto Publish Alias} et {Deployment Preference}, avec le type {canary} ou {linear}, des alarmes, et des {hooks}.
+@slide table CloudFormation dans ce domaine
+Mécanisme | Rôle
+Change sets | prévisualiser une mise à jour
+Stack policy | interdire le remplacement d'une ressource critique
+DeletionPolicy / UpdateReplacePolicy | Retain, Snapshot, Delete : protéger les données
+CreationPolicy + cfn-signal | attendre que les instances soient prêtes
+UpdatePolicy AutoScalingRollingUpdate | mettre à jour un ASG par lots
+Dynamic references · drift detection | pas de secret en dur · repérer les changements manuels
+@end
+L: Un mot sur {CloudFormation} dans ce domaine ?
+@+
+R: On le détaille dans l'épisode suivant, mais retiens déjà ceci. Les {change sets} pour prévisualiser une mise à jour.
+@+2
+R: Les {stack policies} pour interdire le remplacement d'une ressource critique comme une base. {Deletion Policy}, avec {retain}, {snapshot} ou {delete}, et {Update Replace Policy} pour protéger les données lors d'un remplacement.
+@+2
+R: {Creation Policy} avec {cfn signal} pour attendre que les instances soient prêtes. Et {Update Policy} avec {Auto Scaling Rolling Update} pour mettre à jour un {Auto Scaling group} par lots.
 L: Les références dynamiques ?
-R: resolve ssm, resolve secretsmanager. Jamais de secret en dur dans un template. Et la drift detection pour repérer les modifications faites à la main, hors IaC.
-L: Dernier point technique : ECR.
-R: Scan des images : basic à la poussée, ou enhanced via Inspector. Lifecycle policies pour purger les vieilles images. Réplication cross-région et cross-compte. Et les tags immuables pour empêcher d'écraser un tag existant.
+@+
+R: {resolve ssm}, {resolve secretsmanager}. Jamais de secret en dur dans un {template}. Et la {drift detection} pour repérer les modifications faites à la main, hors {IaC}.
+@slide bullets ECR
+Scan des images : **basic** à la poussée ou **enhanced** via Inspector
+Lifecycle policies pour purger les vieilles images
+Réplication cross-région et cross-compte
+Tags immuables : empêcher d'écraser un tag existant
+@end
+L: Dernier point technique : {ECR}.
+@all
+R: Scan des images : {basic} à la poussée, ou {enhanced} via {Inspector}. {Lifecycle policies} pour purger les vieilles images. Réplication cross-région et cross-compte. Et les {tags} immuables pour empêcher d'écraser un {tag} existant.
+@slide quiz RÉFLEXE 1/5
+Zéro downtime et rollback immédiat.
+> **Blue/green** (CodeDeploy) ou alias Lambda pondéré.
+@end
 L: On termine par les réflexes. Je te donne le scénario, tu donnes la réponse.
 R: Vas-y.
-L: Zéro downtime et rollback immédiat.
+L: Zéro {downtime} et {rollback} immédiat.
 [pause 3]
-R: Blue/green, avec CodeDeploy, ou un alias Lambda pondéré.
+@answer
+R: {Blue/green}, avec {CodeDeploy}, ou un alias {Lambda} pondéré.
+@slide quiz RÉFLEXE 2/5
+Limiter l'impact d'un bug en production.
+> **Canary / Linear** + alarme CloudWatch + rollback automatique.
+@end
 L: Limiter l'impact d'un bug en production.
 [pause 3]
-R: Canary ou linear, avec une alarme CloudWatch et le rollback automatique.
+@answer
+R: {Canary} ou {linear}, avec une alarme {CloudWatch} et le {rollback} automatique.
+@slide quiz RÉFLEXE 3/5
+Détecter les changements manuels sur l'infrastructure.
+> **Drift detection** CloudFormation, ou règles **AWS Config**.
+@end
 L: Détecter les changements manuels sur l'infrastructure.
 [pause 3]
-R: La drift detection de CloudFormation, ou des règles AWS Config.
-L: Pipeline qui tourne sur Jenkins sur EC2, on veut réduire l'overhead.
+@answer
+R: La {drift detection} de {CloudFormation}, ou des règles {AWS Config}.
+@slide quiz RÉFLEXE 4/5
+Pipeline sur Jenkins hébergé sur EC2 : réduire l'overhead.
+> Services managés : **CodePipeline + CodeBuild**.
+@end
+L: Pipeline qui tourne sur {Jenkins} sur {EC2}, on veut réduire l'{overhead}.
 [pause 3]
-R: Migrer vers les services managés, CodePipeline et CodeBuild.
-L: Centraliser les dépendances npm et pip.
+@answer
+R: Migrer vers les services managés, {CodePipeline} et {CodeBuild}.
+@slide quiz RÉFLEXE 5/5
+Centraliser les dépendances npm et pip.
+> **CodeArtifact** avec des upstream repositories.
+@end
+L: Centraliser les dépendances {npm} et {pip}.
 [pause 3]
-R: CodeArtifact, avec des upstream repositories.
+@answer
+R: {CodeArtifact}, avec des {upstream repositories}.
+@slide bullets À retenir
+Ordre des hooks · **le test se fait avant le trafic réel**
+Cross-compte = **CMK + bucket policy + rôle**
+Elastic Beanstalk : blue/green = **swap de CNAME**, la base vit **en dehors** de l'environnement
+@end
 L: Parfait. Pour résumer cet épisode en trois phrases ?
-R: Un : connais l'ordre des hooks, et retiens que le test se fait avant le trafic réel. Deux : le cross-compte, c'est CMK, bucket policy et rôle. Trois : sur Elastic Beanstalk, blue/green n'est pas une politique, c'est un swap de CNAME, et la base doit vivre en dehors de l'environnement.
-L: Prochain épisode : Configuration Management et Infrastructure as Code. À tout de suite.
+@+
+R: Un : connais l'ordre des {hooks}, et retiens que le test se fait avant le trafic réel.
+@+
+R: Deux : le cross-compte, c'est {CMK}, {bucket policy} et rôle.
+@+
+R: Trois : sur {Elastic Beanstalk}, {blue/green} n'est pas une politique, c'est un {swap} de {CNAME}, et la base doit vivre en dehors de l'environnement.
+L: Prochain épisode : {Configuration Management} et {Infrastructure as Code}. À tout de suite.

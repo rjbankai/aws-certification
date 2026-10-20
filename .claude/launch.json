@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "quiz-app",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["quiz_app/app.py", "quiz_app/exemples/questions_originales.json", "--no-browser", "--port", "8765"],
+      "port": 8765
+    }
+  ]
+}

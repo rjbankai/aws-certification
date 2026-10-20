@@ -1,0 +1,75 @@
+# Principe — Réagir à une instance compromise, en schémas
+@slide title Réagir à une instance compromise
+Principe en schémas · Domaine 6
+Détecter, isoler, préserver les preuves — sans jamais terminer
+@end
+L: Une instance {EC2} est compromise. Rémy, quel est le réflexe ?
+R: Contenir la menace, mais garder les preuves. L'erreur la plus fréquente dans les options, c'est de terminer l'instance : on perd tout pour l'enquête.
+@slide diagram Détecter et déclencher
+node ec2 1 38 17 24 | Instance EC2 | parle à une IP de minage | 🖥️ | prev
+node gd 24 38 17 24 | GuardDuty | finding | 🛡️ | detect
+node eb 47 38 17 24 | EventBridge | règle sur le finding | 🔀 | service
+node sfn 70 38 29 24 | Step Functions · SSM | runbook de réponse | 🧭 | proactive
+arrow t1 ec2 gd | Flow Logs, DNS | dashed | detect
+arrow t2 gd eb | | | detect
+arrow t3 eb sfn | | | service
+@end
+@show ec2 gd t1
+@flow t1
+L: Comment on la détecte ?
+R: {GuardDuty} analyse les {VPC Flow Logs}, les logs {DNS} et {CloudTrail}, sans qu'on ait à les activer. Il repère l'instance qui parle à un serveur de minage, et émet un {finding}.
+@show eb t2 sfn t3
+@flow t2 t3
+R: Mais {GuardDuty} détecte, il ne corrige rien. Le {finding} arrive dans {EventBridge}, qui déclenche le {runbook} de réponse.
+@slide diagram Contenir sans détruire
+group vpc 1 4 60 92 | VPC | service
+node inst 4 36 26 28 | Instance compromise | conservée pour l'enquête | 🖥️ | prev
+node sg 36 8 22 26 | Security group vide | aucune règle | 🚧 | proactive
+node asg 36 66 22 26 | Retirée de l'ASG / du LB | Standby, désenregistrée | 🚪 | detect
+node snap 67 38 32 22 | Snapshot EBS | preuves pour la forensique | 📸 | data
+node det 67 66 32 26 | Detective | comprendre la cause racine | 🕵️ | service
+node term 67 8 32 24 | Terminer l'instance ? | NON : preuves perdues | ⛔ | prev
+arrow i1 sg inst | isole | | proactive
+arrow i2 asg inst | | | detect
+arrow i3 inst snap | | | data
+@end
+@show vpc inst
+L: Et le {runbook}, il fait quoi ?
+@show sg i1
+@focus sg i1 inst
+R: Un : remplacer le {security group} de l'instance par un {security group} sans aucune règle. Elle ne peut plus communiquer.
+@show asg i2
+@focus asg i2 inst
+R: Deux : la sortir de l'{Auto Scaling group}, par exemple en {Standby}, et la retirer du {load balancer}. Sinon l'{ASG} la remplacerait et la terminerait.
+@show snap i3
+@focus inst i3 snap
+@flow i3
+R: Trois : prendre un {snapshot} des volumes {EBS}, pour la forensique.
+@show det
+@focus det
+R: Et pour l'enquête : {Amazon Detective} explique ce qui s'est passé. {GuardDuty} trouve, {Detective} explique.
+@show term
+@focus term
+L: Et terminer l'instance ?
+R: Jamais en premier. C'est le distracteur classique : on perd la mémoire, les processus, les preuves.
+@unfocus
+@slide flow La chaîne complète
+GuardDuty :: finding
+EventBridge :: règle
+!Isoler :: SG vide
+Sortir de l'ASG
+Snapshot EBS
+SNS :: prévenir
+> **Ne jamais terminer** l'instance avant la forensique
+@end
+@all
+L: On résume la chaîne.
+R: {Finding} {GuardDuty}, règle {EventBridge}, isolation par {security group} vide, sortie de l'{ASG}, {snapshot}, notification. Et on ne termine jamais l'instance.
+@slide quiz QUESTION
+GuardDuty signale une instance compromise. Réponse automatisée qui contient la menace ET préserve les preuves ?
+> EventBridge → automatisation : **SG vide** + **snapshot EBS** + sortie de l'ASG / du LB. **Pas de terminaison.**
+@end
+L: Question. Contenir la menace et préserver les preuves ?
+[pause 5]
+@answer
+R: Un {security group} vide, un {snapshot} {EBS}, la sortie de l'{ASG}. Et surtout, pas de terminaison.

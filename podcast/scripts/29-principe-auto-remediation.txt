@@ -1,0 +1,76 @@
+# Principe — L'auto-remédiation avec EventBridge, en schémas
+@slide title L'auto-remédiation
+Principe en schémas · Domaine 5
+Source, règle EventBridge, action, notification : le pattern universel
+@end
+L: L'auto-remédiation. Rémy, il y a vraiment un pattern unique ?
+R: Oui, et il répond à une bonne partie du domaine cinq. Une source émet un événement, une règle {EventBridge} le reconnaît, une action corrige, et quelqu'un est prévenu.
+@slide diagram Le pattern universel
+node srcs 1 30 19 40 | Sources | appels d'API, Health, Config, GuardDuty, alarmes | 📡 | user
+node eb 26 36 18 28 | EventBridge | règle : event pattern | 🔀 | service
+node fix 51 8 22 26 | Correction | Lambda · SSM Automation · Step Functions | 🛠️ | proactive
+node sns 51 66 22 26 | Notification | SNS, chat, e-mail | 📣 | detect
+node done 79 8 20 26 | Ressource corrigée | | ✅ | data
+arrow e1 srcs eb | événement | | user
+arrow e2 eb fix | | | proactive
+arrow e3 eb sns | | | detect
+arrow e4 fix done | | | data
+@end
+@show srcs eb e1
+@flow e1
+L: On commence par les sources.
+R: Presque tout émet des événements vers {EventBridge} : chaque appel d'{API} via {CloudTrail}, {AWS Health}, les changements de conformité {Config}, les {findings} {GuardDuty}, les alarmes {CloudWatch}.
+@show fix e2 done e4
+@focus eb e2 fix e4 done
+@flow e2 e4
+R: Une règle {EventBridge}, avec un {event pattern}, reconnaît l'événement et déclenche la correction : une {Lambda}, un {runbook} {SSM Automation}, ou une {Step Functions} si c'est long.
+@show sns e3
+@focus eb e3 sns
+@flow e3
+R: Et en parallèle, une notification {SNS}.
+@unfocus
+L: Et le polling, le cron toutes les cinq minutes ?
+R: Presque toujours la mauvaise réponse. S'il existe un événement, on réagit à l'événement.
+@slide diagram Exemple : une clé d'accès publiée sur GitHub
+node gh 1 38 17 24 | Clé publiée | sur GitHub | 🐙 | user
+node health 23 38 19 24 | AWS Health | RISK_CREDENTIALS_EXPOSED | 🩺 | prev
+node eb 48 38 17 24 | EventBridge | règle aws.health | 🔀 | service
+node sf 72 38 27 24 | Step Functions | orchestre la réponse | 🧭 | proactive
+node dis 72 4 27 24 | Désactiver la clé | IAM UpdateAccessKey | 🔒 | proactive
+node ct 72 72 27 24 | Activité récente | lue dans CloudTrail | 🕵️ | detect
+arrow k1 gh health | détectée par AWS | | user
+arrow k2 health eb | | | prev
+arrow k3 eb sf | | | service
+arrow k4 sf dis | | | proactive
+arrow k5 sf ct | | dashed | detect
+@end
+@show gh health k1
+@flow k1
+L: Prenons un cas concret : une clé d'accès {IAM} publiée sur {GitHub}.
+R: {AWS} la détecte et émet un événement {AWS Health} : {AWS RISK CREDENTIALS EXPOSED}.
+@show eb k2 sf k3
+@flow k2 k3
+R: Une règle {EventBridge} sur la source {aws dot health} déclenche une {Step Functions}.
+@show dis k4 ct k5
+@focus sf dis ct k4 k5
+@flow k4 k5
+R: Elle désactive la clé, liste l'activité récente de cette clé dans {CloudTrail}, et prévient l'équipe sécurité. Sans aucune intervention humaine.
+@unfocus
+@slide table Les déclinaisons qui tombent
+Événement | Source | Correction
+Quelqu'un désactive CloudTrail | API StopLogging (CloudTrail) | Lambda : StartLogging + alerte · SCP en prévention
+SG ouvert sur 0.0.0.0/0:22 | règle Config restricted-ssh | remédiation SSM Automation
+Instance en retraite planifiée | AWS Health scheduled change | SSM Automation stop / start
+Finding GuardDuty | GuardDuty | isoler l'instance (SG vide + snapshot)
+@end
+@all
+L: Les déclinaisons à connaître ?
+R: Toujours le même schéma. Seule la source change : un appel d'{API}, une règle {Config}, un événement {Health}, un {finding} {GuardDuty}.
+@slide quiz QUESTION
+Être notifié et corriger automatiquement dès que quelqu'un exécute StopLogging sur CloudTrail.
+> Règle **EventBridge** sur l'appel d'API → **Lambda** qui relance **StartLogging** + SNS. En prévention : une **SCP**.
+@end
+L: Question. Quelqu'un exécute {Stop Logging} sur {CloudTrail}.
+[pause 4]
+@answer
+R: Une règle {EventBridge} sur l'appel d'{API}, une {Lambda} qui relance {Start Logging}, et une notification. En prévention, une {SCP}.

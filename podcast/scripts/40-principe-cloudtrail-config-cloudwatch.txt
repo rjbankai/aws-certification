@@ -1,0 +1,52 @@
+# Principe — CloudTrail, Config ou CloudWatch, en schémas
+@slide title CloudTrail, Config ou CloudWatch ?
+Principe en schémas · Domaine 4
+Qui a fait quoi, à quoi ça ressemblait, comment ça se comporte
+@end
+L: {CloudTrail}, {Config}, {CloudWatch}. Trois services autour de la même ressource. Comment les départager, Rémy ?
+R: Avec trois questions différentes. Pose la question, et le service tombe tout seul.
+@slide diagram Trois questions, trois services
+node res 36 38 28 24 | Security group sg-123 | une ressource | 🧱 | account
+node ct 1 2 30 30 | CloudTrail | QUI a fait l'appel d'API, quand, d'où ? | 🕵️ | org
+node cfg 69 2 30 30 | AWS Config | À QUOI ressemblait-elle ? Conforme ? | 📸 | detect
+node cw 69 70 30 28 | CloudWatch | COMMENT se comporte-t-elle ? | 📈 | service
+node eb 1 70 30 28 | EventBridge | réagir en temps réel | ⚡ | proactive
+arrow q1 res ct | | | org
+arrow q2 res cfg | | | detect
+arrow q3 res cw | | | service
+arrow q4 ct eb | AWS API Call via CloudTrail | dashed | proactive
+@end
+@show res
+L: Prenons un {security group}.
+@show ct q1
+@focus ct q1 res
+R: Quelqu'un l'a modifié hier. Qui, quand, depuis quelle {IP} ? C'est {CloudTrail}, qui enregistre chaque appel d'{API}.
+@show cfg q2
+@focus cfg q2 res
+R: Quelles règles contenait-il avant la modification ? Est-il conforme à nos règles ? C'est {AWS Config}, avec la {timeline} de chaque ressource et ses règles de conformité.
+@show cw q3
+@focus cw q3 res
+R: Combien de connexions, d'erreurs, quelle latence ? C'est {CloudWatch} : métriques, logs, alarmes.
+@show eb q4
+@focus ct q4 eb
+@flow q4
+L: Et pour réagir tout de suite à la modification ?
+R: {CloudTrail} livre ses fichiers dans {S3} avec environ cinq minutes de délai. Pour réagir en quasi temps réel, on passe par {EventBridge} : chaque appel d'{API} y arrive comme un événement.
+@unfocus
+@slide cards CloudTrail : ce qui tombe
+Management events :: Activés par défaut · 90 jours dans Event history
+Data events :: Objets S3, invoke Lambda, items DynamoDB · **désactivés par défaut**, payants
+Intégrité :: **Log file validation** + digest files + Object Lock + compte dédié
+Multi-comptes :: **Organization trail** · CloudTrail Lake pour le SQL
+@end
+@all
+L: Les pièges {CloudTrail} ?
+R: Les {data events} sont désactivés par défaut. Pour prouver que les logs sont intacts : {log file validation}. Et pour tous les comptes : un {organization trail}.
+@slide quiz QUESTION
+Quelles règles d'entrée contenait un security group la semaine dernière, avant d'être modifié ?
+> **AWS Config** (timeline de configuration). CloudTrail dirait qui l'a modifié.
+@end
+L: Question. Les règles d'un {security group} la semaine dernière.
+[pause 4]
+@answer
+R: {AWS Config}. Et {CloudTrail} dirait qui l'a modifié.

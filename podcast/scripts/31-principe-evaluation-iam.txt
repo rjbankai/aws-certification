@@ -1,0 +1,75 @@
+# Principe — L'évaluation d'une requête IAM en schémas
+@slide title Une requête IAM, autorisée ou refusée ?
+Principe en schémas · Domaine 6
+Deny explicite, plafonds, puis droits : le parcours d'une requête
+@end
+L: L'évaluation d'une requête {IAM}. Rémy, comment se le représenter ?
+R: Comme un parcours d'obstacles. La requête doit franchir chaque porte. Une seule porte fermée, et c'est refusé.
+@slide diagram Le parcours d'une requête
+node req 1 38 14 24 | Requête | s3:GetObject | 📨 | user
+node deny 19 38 15 24 | Deny explicite ? | n'importe où | ⛔ | prev
+node scp 38 4 18 22 | SCP · RCP | plafond de l'Org | 🏛️ | ou
+node pb 38 38 18 24 | Permission boundary | plafond du rôle | 📏 | ou
+node sp 38 73 18 22 | Session policy | plafond de la session | ⏳ | ou
+node grant 61 38 18 24 | Identity OU resource policy | accorde ? | ✅ | data
+node allow 84 4 15 24 | Autorisé | | 🟢 | data
+node no 84 72 15 24 | Refusé | deny implicite | 🔴 | prev
+arrow d1 req deny | | | user
+arrow d2 deny scp | non | | ou
+arrow d3 deny pb | non | | ou
+arrow d4 deny sp | non | | ou
+arrow d5 pb grant | et | | data
+arrow d6 grant allow | oui | | data
+arrow d7 grant no | rien n'accorde | dashed | prev
+arrow d8 deny no | oui → refusé | dashed | prev
+@end
+@show req deny d1
+@flow d1
+L: La requête arrive.
+@show no d8
+@focus deny d8 no
+@flow d8
+R: Première porte : y a-t-il un {Deny} explicite, n'importe où ? Dans une {SCP}, une politique {IAM}, une {resource policy}. Si oui, c'est refusé. Toujours, sans exception.
+@unfocus
+@show scp pb sp d2 d3 d4
+@focus scp pb sp
+@flow d2 d3 d4
+R: Ensuite, les plafonds. La {SCP} et la {RCP} de l'organisation, la {permission boundary} si elle existe, la {session policy} si elle existe. L'action doit être autorisée par chacun de ces plafonds. Mais attention : un plafond n'accorde rien.
+@show grant d5
+@focus grant d5
+@flow d5
+R: Il faut encore une politique qui accorde vraiment le droit : une {identity policy} sur le rôle, ou une {resource policy} sur la ressource, comme une {bucket policy}.
+@show allow d6
+@focus grant d6 allow
+@flow d6
+R: Si tout est réuni : autorisé.
+@show d7
+@focus grant d7 no
+@flow d7
+R: Si rien n'accorde le droit, c'est un {deny} implicite.
+@unfocus
+@slide cards Accorder ou plafonner ?
+Accordent :: **Identity policy** · **Resource policy** (bucket, key, queue policy…)
+Plafonnent seulement :: **SCP** · **RCP** · **Permission boundary** · **Session policy**
+Gagne toujours :: Un **Deny explicite**, où qu'il soit
+SCP :: Ne s'applique **pas** au compte de gestion
+@end
+@all
+L: Donc une {SCP} qui autorise tout, sans politique {IAM}…
+R: … ne donne aucun droit. C'est un piège très fréquent. Et une {SCP} ne s'applique pas au compte de gestion de l'organisation.
+@slide quiz QUESTION
+Une SCP autorise s3:*. L'utilisateur n'a aucune politique IAM. Peut-il lire un objet S3 de son compte ?
+> **Non** : la SCP plafonne mais n'accorde rien → deny implicite.
+@end
+L: Question. Une {SCP} autorise {s3 star}. L'utilisateur n'a aucune politique {IAM}. Peut-il lire un objet ?
+[pause 4]
+@answer
+R: Non. Deny implicite : la {SCP} plafonne, elle n'accorde rien.
+@slide quiz QUESTION
+Laisser des développeurs créer des rôles IAM sans qu'ils puissent dépasser un ensemble de droits approuvé.
+> Autoriser iam:CreateRole **seulement avec** la condition **iam:PermissionsBoundary** = la boundary approuvée.
+@end
+L: Et laisser des développeurs créer des rôles sans escalade de privilèges ?
+[pause 4]
+@answer
+R: Autoriser la création de rôles uniquement avec la condition {iam Permissions Boundary} égale à la {boundary} approuvée.

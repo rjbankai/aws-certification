@@ -1,0 +1,59 @@
+# Principe — Le pipeline de golden AMI, en schémas
+@slide title Le pipeline de golden AMI
+Principe en schémas · Domaine 2
+EC2 Image Builder, puis la flotte remplacée sans downtime
+@end
+L: Une {AMI} durcie, testée et distribuée automatiquement. Rémy, quel est le chemin ?
+R: {EC2 Image Builder} pour fabriquer l'{AMI}, puis un {instance refresh} pour remplacer la flotte. Sans script maison, sans {Packer} à maintenir.
+@slide diagram De la recette à la flotte
+node comp 1 6 18 26 | Components | build + tests | 🧩 | service
+node rec 1 64 18 28 | Recipe | AMI de base + components | 📋 | service
+node pipe 24 34 19 30 | Image Builder | pipeline planifié | 🏭 | org
+node ami 48 34 18 30 | Golden AMI | durcie, testée | 💿 | data
+node dist 48 0 18 26 | Distribution | régions, comptes | 🌍 | ou
+node lt 72 6 27 26 | Launch template | nouvelle version | 📄 | proactive
+node asg 72 64 27 30 | Instance refresh | MinHealthyPercentage, checkpoints | 🔄 | account
+arrow p1 comp pipe | | | service
+arrow p2 rec pipe | | | service
+arrow p3 pipe ami | | | org
+arrow p4 ami dist | | | ou
+arrow p5 ami lt | | | proactive
+arrow p6 lt asg | | | account
+@end
+@show comp rec
+L: On commence par les ingrédients.
+R: Des {components} : des étapes de construction, comme installer l'agent de sécurité, et des étapes de test. Et une {recipe}, qui combine une {AMI} de base et ces {components}.
+@show pipe p1 p2 ami p3
+@focus pipe p1 p2 p3 ami
+@flow p1 p2 p3
+R: Le {pipeline} {Image Builder} tourne selon un planning, par exemple chaque semaine, ou quand l'{AMI} de base change. Il construit, teste, et produit la {golden AMI}.
+@show dist p4
+@focus ami p4 dist
+@flow p4
+R: Les {distribution settings} la copient dans d'autres régions et la partagent avec d'autres comptes.
+@show lt p5
+@focus ami p5 lt
+@flow p5
+R: Ils peuvent aussi créer directement une nouvelle version du {launch template}.
+@show asg p6
+@focus lt p6 asg
+@flow p6
+R: Reste à remplacer les instances en service : un {instance refresh} sur l'{Auto Scaling group}. Avec un pourcentage minimum d'instances saines, des {checkpoints} pour valider par paliers, et un {rollback} possible.
+@unfocus
+@slide cards Auto Scaling : ne pas confondre
+Instance refresh :: **Remplacer toute la flotte** après une nouvelle AMI
+Lifecycle hook :: **Agir pendant** le lancement ou la terminaison (installer, récupérer des logs)
+Warm pool :: Instances pré-initialisées → **démarrage rapide**
+Launch template :: Versionné · les launch configurations sont l'ancienne génération
+@end
+@all
+L: Trois notions à ne pas confondre ?
+R: {Instance refresh} pour remplacer la flotte. {Lifecycle hook} pour agir pendant le lancement ou la terminaison. {Warm pool} pour démarrer vite. Et toujours des {launch templates}, pas des {launch configurations}.
+@slide quiz QUESTION
+Construire, tester et distribuer chaque mois une AMI durcie, puis remplacer la flotte sans downtime.
+> **EC2 Image Builder** (pipeline + distribution) puis **ASG instance refresh**.
+@end
+L: Question. Une {AMI} durcie chaque mois, puis la flotte remplacée sans {downtime}.
+[pause 4]
+@answer
+R: {EC2 Image Builder}, puis un {instance refresh}.

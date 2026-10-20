@@ -1,0 +1,72 @@
+# Principe — AppConfig et automatisations complexes, en schémas
+@slide title AppConfig et automatisations
+Principe en schémas · Domaine 2
+Changer la configuration sans redéployer, et orchestrer les tâches longues
+@end
+L: {AWS AppConfig}, et les automatisations complexes. Rémy, pourquoi les mettre ensemble ?
+R: Parce que les deux répondent à la même idée : changer le comportement d'un système en production de façon contrôlée, sans tout redéployer et sans script fragile.
+@slide diagram AppConfig : déployer une configuration
+node dev 1 38 16 24 | Équipe | nouveau flag | 👩‍💻 | user
+node prof 22 38 18 24 | Profil de config | feature flags ou libre | 🎚️ | service
+node val 22 4 18 24 | Validateurs | JSON Schema ou Lambda | ✅ | proactive
+node strat 46 38 20 24 | Stratégie | linéaire, bake time | 📈 | service
+node app 72 38 27 24 | Application | agent AppConfig, extension Lambda | 🚀 | account
+node alarm 46 72 20 24 | Alarme CloudWatch | taux d'erreurs | 🚨 | prev
+node rb 72 72 27 24 | Rollback | automatique | ↩️ | prev
+arrow c1 dev prof | | | user
+arrow c2 val prof | vérifie | dashed | proactive
+arrow c3 prof strat | | | service
+arrow c4 strat app | progressif | | account
+arrow c5 alarm rb | se déclenche | | prev
+@end
+@show dev prof c1
+@flow c1
+L: Comment ça marche, {AppConfig} ?
+R: On décrit la configuration dans un profil : des {feature flags}, ou une configuration libre en {JSON} ou {YAML}. Elle vit hors du code de l'application.
+@show val c2
+@focus val c2 prof
+R: Avant tout déploiement, des validateurs la vérifient : un {JSON Schema}, ou une fonction {Lambda}. Une configuration invalide ne part jamais.
+@show strat app c3 c4
+@focus prof c3 strat c4 app
+@flow c3 c4
+R: Ensuite, une stratégie de déploiement la diffuse progressivement : par exemple dix pour cent des cibles toutes les minutes, puis un temps d'observation, le {bake time}. L'application la récupère avec l'agent {AppConfig}, ou l'extension {Lambda}.
+@show alarm rb c5
+@focus alarm c5 rb
+@flow c5
+R: Et si une alarme {CloudWatch} associée se déclenche pendant le déploiement, {AppConfig} revient automatiquement à l'ancienne configuration.
+@unfocus
+L: La question type ?
+R: Activer une fonctionnalité pour une partie des utilisateurs, sans redéployer, avec un retour arrière automatique : {AppConfig} et ses {feature flags}.
+@slide diagram Orchestrer une automatisation longue
+node trig 1 38 17 24 | Déclencheur | EventBridge, planning | ⏰ | user
+node sfn 24 30 22 40 | Step Functions | étapes, Retry, Catch, Wait | 🧭 | service
+node l1 52 4 22 24 | Lambda | appels SDK, < 15 min | λ | proactive
+node ssm 52 38 22 24 | SSM Automation | runbook sur les instances | 🛠️ | detect
+node batch 52 72 22 24 | Batch · Fargate | traitements longs | 📦 | ou
+node notif 80 38 19 24 | SNS | rapport, alerte | 📣 | data
+arrow o1 trig sfn | | | user
+arrow o2 sfn l1 | | | proactive
+arrow o3 sfn ssm | | | detect
+arrow o4 sfn batch | | | ou
+arrow o5 ssm notif | | | data
+@end
+@show trig sfn o1
+@flow o1
+L: Et les automatisations complexes ?
+R: Une {Lambda} seule convient pour une action courte : moins de quinze minutes, quelques appels au {SDK}. Dès qu'il y a plusieurs étapes, des attentes, des reprises sur erreur : {Step Functions}.
+@show l1 ssm batch o2 o3 o4
+@focus sfn o2 o3 o4 l1 ssm batch
+@flow o2 o3 o4
+R: {Step Functions} orchestre les étapes, avec {Retry} et {Catch} pour chaque état. Chaque étape appelle le bon outil : une {Lambda}, un {runbook} {SSM Automation} sur les instances, ou {AWS Batch} et {Fargate} pour les traitements longs.
+@show notif o5
+@focus notif o5
+R: Et à la fin, une notification. Le réflexe à l'examen : enchaîner des {Lambdas} à la main, ou un script sur une instance, c'est presque toujours la mauvaise réponse.
+@unfocus
+@slide quiz QUESTION
+Activer une nouvelle fonctionnalité pour 10 % des utilisateurs, sans redéployer, avec retour arrière automatique sur alarme.
+> **AWS AppConfig** : feature flag + stratégie de déploiement + alarme CloudWatch (rollback automatique).
+@end
+L: Question. Une fonctionnalité pour dix pour cent des utilisateurs, sans redéployer, avec retour arrière sur alarme.
+[pause 4]
+@answer
+R: {AWS AppConfig}, avec un {feature flag}, une stratégie de déploiement et une alarme.

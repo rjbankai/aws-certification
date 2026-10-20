@@ -1,0 +1,136 @@
+# Principe — Les stratégies de déploiement en schémas
+@slide title Les stratégies de déploiement
+Principe en schémas · Domaine 1
+Capacité, coût et rollback, animés sur une même flotte
+@end
+L: Les stratégies de déploiement, animées. Le principe ?
+R: Une flotte de quatre instances en version un. On veut passer en version deux. Regarde à chaque fois ce que devient la capacité, c'est-à-dire le nombre d'instances qui servent du trafic.
+@slide diagram Rolling et all at once
+group tg 1 4 74 92 | Target group | service
+node s1a 4 13 33 32 | Instance 1 | version 1 | 🟦 | account
+node s1o 4 13 33 32 | Instance 1 | en déploiement… | ⏳ | #6b7a93
+node s1b 4 13 33 32 | Instance 1 | version 2 | 🟩 | data
+node s2a 39 13 33 32 | Instance 2 | version 1 | 🟦 | account
+node s2o 39 13 33 32 | Instance 2 | en déploiement… | ⏳ | #6b7a93
+node s2b 39 13 33 32 | Instance 2 | version 2 | 🟩 | data
+node s3a 4 58 33 32 | Instance 3 | version 1 | 🟦 | account
+node s3o 4 58 33 32 | Instance 3 | en déploiement… | ⏳ | #6b7a93
+node s3b 4 58 33 32 | Instance 3 | version 2 | 🟩 | data
+node s4a 39 58 33 32 | Instance 4 | version 1 | 🟦 | account
+node s4o 39 58 33 32 | Instance 4 | en déploiement… | ⏳ | #6b7a93
+node s4b 39 58 33 32 | Instance 4 | version 2 | 🟩 | data
+node c4 79 32 20 34 | Capacité | 4 / 4 | ✅ | data
+node c2 79 32 20 34 | Capacité | 2 / 4 | ⚠️ | detect
+node c0 79 32 20 34 | Capacité | 0 / 4 — downtime | ⛔ | prev
+@end
+@show tg s1a s2a s3a s4a c4
+L: Voici la flotte de départ.
+@hide s1a s2a s3a s4a c4
+@show s1o s2o s3o s4o c0
+@focus s1o s2o s3o s4o c0
+R: Premier cas, {all at once}. Toutes les instances sont mises à jour en même temps. La capacité tombe à zéro : c'est du {downtime}. Le plus rapide, mais réservé au dev et au test.
+@hide s1o s2o s3o s4o c0
+@show s1a s2a s3a s4a c4
+@unfocus
+L: Et {rolling} ?
+@hide s1a s2a c4
+@show s1o s2o c2
+@focus s1o s2o c2
+R: {Rolling} : on met à jour un {batch}, ici deux instances. Pendant ce temps, la capacité est réduite à deux sur quatre.
+@hide s1o s2o s3a s4a
+@show s1b s2b s3o s4o
+@focus s3o s4o c2
+R: Puis le {batch} suivant. Pas de {downtime}, aucun surcoût, mais la capacité baisse pendant tout le déploiement.
+@hide s3o s4o c2
+@show s3b s4b c4
+@unfocus
+R: Et le {rollback} est lent : il faut redéployer l'ancienne version de la même façon.
+@slide diagram Rolling with additional batch
+group tg 1 4 74 92 | Target group | service
+node s1a 3 13 22 32 | Instance 1 | v1 | 🟦 | account
+node s1o 3 13 22 32 | Instance 1 | déploiement | ⏳ | #6b7a93
+node s1b 3 13 22 32 | Instance 1 | v2 | 🟩 | data
+node s2a 27 13 22 32 | Instance 2 | v1 | 🟦 | account
+node s2o 27 13 22 32 | Instance 2 | déploiement | ⏳ | #6b7a93
+node s2b 27 13 22 32 | Instance 2 | v2 | 🟩 | data
+node s3a 3 58 22 32 | Instance 3 | v1 | 🟦 | account
+node s3o 3 58 22 32 | Instance 3 | déploiement | ⏳ | #6b7a93
+node s3b 3 58 22 32 | Instance 3 | v2 | 🟩 | data
+node s4a 27 58 22 32 | Instance 4 | v1 | 🟦 | account
+node s4o 27 58 22 32 | Instance 4 | déploiement | ⏳ | #6b7a93
+node s4b 27 58 22 32 | Instance 4 | v2 | 🟩 | data
+node e1 51 13 22 32 | Batch en plus | v2 | ➕ | proactive
+node e2 51 58 22 32 | Batch en plus | v2 | ➕ | proactive
+node c4 79 32 20 34 | Capacité | 4 / 4 | ✅ | data
+node c6 79 32 20 34 | Capacité | 6 / 4 | ✅ | data
+@end
+@show tg s1a s2a s3a s4a c4
+L: La variante qui revient le plus souvent : {rolling with additional batch}.
+@show e1 e2
+@hide c4
+@show c6
+@focus e1 e2 c6
+R: Avant de toucher à la flotte, {Elastic Beanstalk} lance un {batch} supplémentaire, déjà en version deux.
+@hide s1a s2a c6
+@show s1o s2o c4
+@focus s1o s2o c4
+R: Ensuite seulement, il met à jour le premier {batch}. La capacité ne descend jamais sous quatre.
+@hide s1o s2o s3a s4a
+@show s1b s2b s3o s4o
+@focus s3o s4o e1 e2 c4
+R: Puis le second {batch}. Le {batch} supplémentaire est toujours là : la capacité reste à quatre.
+@hide s3o s4o e1 e2
+@show s3b s4b
+@unfocus
+R: À la fin, le {batch} supplémentaire est retiré. Capacité maintenue, surcoût faible : c'est la réponse quand on veut toute la capacité sans payer le double.
+@slide diagram Immutable et blue/green
+group old 1 8 31 86 | ASG actuel | account
+node o1 3 18 27 30 | 4 instances | version 1 | 🟦 | account
+group tmp 36 8 31 86 | ASG temporaire | data
+node n1 38 18 27 30 | 4 instances | version 2, neuves | 🟩 | data
+node chk 38 58 27 26 | Health checks | OK ? | ✅ | proactive
+node users 74 40 25 22 | Utilisateurs | | 👥 | user
+node blue 74 6 25 22 | Environnement bleu | v1 | 🟦 | account
+node green 74 74 25 22 | Environnement vert | v2 | 🟩 | data
+arrow b1 users blue | 100 % | | service
+arrow b2 users green | swap CNAME | | data
+@end
+@show old o1
+L: Et {immutable} ?
+@show tmp n1
+@focus tmp n1
+R: On ne touche pas aux instances existantes. On crée des instances neuves, en version deux, dans un {Auto Scaling group} temporaire.
+@show chk
+@focus n1 chk
+R: Si elles passent les {health checks}, elles rejoignent la flotte et les anciennes sont terminées. Sinon, on supprime simplement l'{ASG} temporaire : {rollback} rapide. C'est le déploiement le plus sûr, mais il double la flotte un moment.
+@unfocus
+@show users blue b1
+@flow b1
+L: Et {blue/green} ?
+R: Deux environnements complets. Les utilisateurs sont sur le bleu.
+@hide b1
+@show green b2
+@focus users b2 green
+@flow b2
+R: On bascule tout vers le vert : sur {Elastic Beanstalk}, c'est un {swap} de {CNAME}. {Rollback} instantané : on rebascule. Attention, ce n'est pas une politique de déploiement {Elastic Beanstalk}, c'est une action.
+@unfocus
+@slide table En une image
+Stratégie | Capacité | Coût | Rollback
+All at once | **0** pendant le déploiement | nul | redéploiement
+Rolling | **réduite** | nul | lent
+Rolling + additional batch | **maintenue** | faible | lent
+Immutable | maintenue | élevé (temporaire) | **rapide**
+Blue/green | double | élevé (temporaire) | **instantané**
+Canary / linear | maintenue | faible | rapide, blast radius limité
+@end
+@all
+L: On garde le tableau en tête.
+R: Le réflexe : pleine capacité et surcoût minimal, {rolling with additional batch}. Le plus sûr, {immutable}. {Rollback} instantané, {blue/green}. Limiter l'impact d'un bug, {canary}.
+@slide quiz QUESTION
+Elastic Beanstalk : garder toute la capacité pendant le déploiement, avec un surcoût minimal.
+> **Rolling with additional batch**.
+@end
+L: Question. Toute la capacité pendant le déploiement, surcoût minimal ?
+[pause 4]
+@answer
+R: {Rolling with additional batch}.

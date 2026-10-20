@@ -1,0 +1,1812 @@
+{
+  "meta": {
+    "titre": "Questions originales (podcast épisodes 9 à 14)",
+    "examen": "DOP-C02",
+    "langue": "en",
+    "version_schema": "1.1.0",
+    "genere_le": "2026-10-17",
+    "nb_questions": 48
+  },
+  "themes": [
+    {
+      "id": "sdlc_automation",
+      "libelle": "SDLC Automation",
+      "nb_questions": 8
+    },
+    {
+      "id": "config_management_iac",
+      "libelle": "Configuration Management & IaC",
+      "nb_questions": 8
+    },
+    {
+      "id": "resilient_cloud_solutions",
+      "libelle": "Resilient Cloud Solutions",
+      "nb_questions": 8
+    },
+    {
+      "id": "monitoring_logging",
+      "libelle": "Monitoring & Logging",
+      "nb_questions": 8
+    },
+    {
+      "id": "incident_event_response",
+      "libelle": "Incident & Event Response",
+      "nb_questions": 8
+    },
+    {
+      "id": "security_compliance",
+      "libelle": "Security & Compliance",
+      "nb_questions": 8
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q001",
+      "numero": 1,
+      "lot": 1,
+      "titre": "Which solution will meet this requirement?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Attach an IAM policy to the developers' group that denies the GitPush action with a condition on the codecommit References key for refs heads main.",
+      "options_correctes": [],
+      "explication": "CodeCommit n'a pas de fonctionnalité native de protection de branche, donc A n'existe pas. C, les approval rules, s'appliquent aux pull requests, elles n'empêchent pas un push direct. D réagit après coup au lieu d'empêcher, et c'est du code maison. La bonne réponse est une politique IAM avec un Deny et la condition codecommit References.",
+      "enonce": "A company stores its application code in an AWS CodeCommit repository. A DevOps engineer must prevent developers from pushing commits directly to the main branch, while still allowing them to push to feature branches. Which solution will meet this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Enable branch protection on the main branch in the CodeCommit repository settings."
+        },
+        {
+          "lettre": "B",
+          "texte": "Attach an IAM policy to the developers' group that denies the GitPush action with a condition on the codecommit References key for refs heads main."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create an approval rule template that requires two approvals for the main branch."
+        },
+        {
+          "lettre": "D",
+          "texte": "Configure an EventBridge rule that reverts any commit pushed to the main branch."
+        }
+      ]
+    },
+    {
+      "id": "Q002",
+      "numero": 2,
+      "lot": 1,
+      "titre": "Which lifecycle hook should the team use to run the tests?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "AfterAllowTestTraffic",
+      "options_correctes": [],
+      "explication": "After Allow Test Traffic. À ce moment, le listener de test pointe vers la nouvelle version, mais le trafic de production n'a pas encore bougé. After Install est trop tôt, rien ne reçoit encore de trafic. After Allow Traffic est trop tard, la production est déjà sur la nouvelle version. Before Install se passe avant même la création du nouveau task set.",
+      "enonce": "A company uses AWS CodeDeploy to deploy a new version of an Amazon ECS service with a blue green deployment. The team wants to run automated integration tests against the new task set before any production traffic is shifted to it. If the tests fail, the deployment must roll back. Which lifecycle hook should the team use to run the tests?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "BeforeInstall"
+        },
+        {
+          "lettre": "B",
+          "texte": "AfterInstall"
+        },
+        {
+          "lettre": "C",
+          "texte": "AfterAllowTestTraffic"
+        },
+        {
+          "lettre": "D",
+          "texte": "AfterAllowTraffic"
+        }
+      ]
+    },
+    {
+      "id": "Q003",
+      "numero": 3,
+      "lot": 1,
+      "titre": "Which combination of actions will resolve the issue?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "A",
+        "C"
+      ],
+      "nb_reponses_attendues": 2,
+      "reponse_note": null,
+      "solution": null,
+      "options_correctes": [
+        {
+          "lettre": "A",
+          "texte": "Create a customer managed AWS KMS key, use it for the artifact store, and grant the production account access in the key policy."
+        },
+        {
+          "lettre": "C",
+          "texte": "Add a bucket policy to the artifact bucket that allows the cross-account role from the production account to access the artifacts."
+        }
+      ],
+      "explication": "La clé AWS managed pour S3 ne peut pas être partagée avec un autre compte, il faut une customer managed key. Et il faut une bucket policy qui autorise le rôle du compte de production. C'est notre trio : CMK, bucket policy, rôle. B répond à un problème de région, pas de compte. D est une faille de sécurité, toujours faux.",
+      "enonce": "A company has a CI CD pipeline in AWS CodePipeline in a tools account. The pipeline must deploy artifacts to a production account. The deployment stage fails with an access denied error when the production account tries to read the artifacts from the artifact bucket, which is encrypted with the default AWS managed key for Amazon S3. Which combination of actions will resolve the issue? (Choose TWO.)",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a customer managed AWS KMS key, use it for the artifact store, and grant the production account access in the key policy."
+        },
+        {
+          "lettre": "B",
+          "texte": "Enable S3 Cross-Region Replication from the artifact bucket to a bucket in the production account."
+        },
+        {
+          "lettre": "C",
+          "texte": "Add a bucket policy to the artifact bucket that allows the cross-account role from the production account to access the artifacts."
+        },
+        {
+          "lettre": "D",
+          "texte": "Make the artifact bucket public and restrict access with an IP condition."
+        }
+      ]
+    },
+    {
+      "id": "Q004",
+      "numero": 4,
+      "lot": 1,
+      "titre": "Which deployment policy should the company use?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Rolling with additional batch",
+      "options_correctes": [],
+      "explication": "Rolling with additional batch lance d'abord un lot supplémentaire, donc la capacité ne baisse jamais, et le surcoût se limite à ce lot. All at once coupe le service. Rolling réduit la capacité. Immutable maintient la capacité aussi, mais il double la flotte pendant le déploiement, donc il coûte plus cher. Les mots qui tranchent : minimize additional cost.",
+      "enonce": "A company runs a production web application on AWS Elastic Beanstalk. The company wants to deploy new versions with no reduction in capacity during the deployment, and wants to minimize additional cost. Which deployment policy should the company use?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "All at once"
+        },
+        {
+          "lettre": "B",
+          "texte": "Rolling"
+        },
+        {
+          "lettre": "C",
+          "texte": "Rolling with additional batch"
+        },
+        {
+          "lettre": "D",
+          "texte": "Immutable"
+        }
+      ]
+    },
+    {
+      "id": "Q005",
+      "numero": 5,
+      "lot": 1,
+      "titre": "What is the MOST efficient way to complete the deployment?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Redeploy with the ignore application stop failures option enabled.",
+      "options_correctes": [],
+      "explication": "Application Stop exécute le script de la révision déjà installée, pas celui de la nouvelle. C'est le piège de B et de D : modifier la nouvelle révision ne change rien, puisque c'est l'ancien script qui plante. C fonctionne peut-être, mais c'est lourd et ce n'est pas le plus efficace.",
+      "enonce": "A DevOps engineer deploys a new application revision to Amazon EC2 instances with AWS CodeDeploy. The deployment fails on every instance during the ApplicationStop lifecycle event. The engineer discovers that the stop script from the previously deployed revision contains an error. What is the MOST efficient way to complete the deployment?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Redeploy with the ignore application stop failures option enabled."
+        },
+        {
+          "lettre": "B",
+          "texte": "Fix the ApplicationStop script in the new revision and redeploy."
+        },
+        {
+          "lettre": "C",
+          "texte": "Terminate all instances and let the Auto Scaling group launch new ones."
+        },
+        {
+          "lettre": "D",
+          "texte": "Remove the ApplicationStop hook from the new revision's appspec file."
+        }
+      ]
+    },
+    {
+      "id": "Q006",
+      "numero": 6,
+      "lot": 1,
+      "titre": "Which solution meets these requirements with the LEAST operational overhead?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use the AutoPublishAlias and DeploymentPreference properties with the type Canary10Percent10Minutes and reference the CloudWatch alarm.",
+      "options_correctes": [],
+      "explication": "Dix pour cent puis le reste, c'est deux paliers, donc canary. SAM avec Deployment Preference crée le déploiement CodeDeploy, et la propriété Alarms gère le rollback automatique. D se trompe de type : linear, ce sont des paliers égaux répétés, et le rollback est fait à la main. A ne marche pas, Route 53 ne route pas vers un alias Lambda. C, c'est du code maison.",
+      "enonce": "A company deploys AWS Lambda functions by using AWS SAM. The company wants to shift ten percent of traffic to a new version for ten minutes, then shift the remaining traffic, and automatically roll back if an Amazon CloudWatch alarm on errors enters the ALARM state. Which solution meets these requirements with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create two Lambda aliases and use Amazon Route 53 weighted records to split traffic."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use the AutoPublishAlias and DeploymentPreference properties with the type Canary10Percent10Minutes and reference the CloudWatch alarm."
+        },
+        {
+          "lettre": "C",
+          "texte": "Write a Step Functions workflow that updates alias weights and checks the alarm every minute."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use the type Linear10PercentEvery10Minutes and configure a CloudWatch alarm action to invoke a rollback Lambda function."
+        }
+      ]
+    },
+    {
+      "id": "Q007",
+      "numero": 7,
+      "lot": 1,
+      "titre": "What should the DevOps engineer do?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Configure the CodeBuild project to use private subnets that route outbound traffic through a NAT gateway.",
+      "options_correctes": [],
+      "explication": "Un projet CodeBuild dans un VPC n'a pas d'IP publique, même dans un subnet public. D est donc le piège, et A n'est pas possible. Il faut des subnets privés avec une NAT gateway, ou des VPC endpoints pour les services AWS. C dégrade la sécurité, c'est faux.",
+      "enonce": "A company uses AWS CodeBuild to build a Java application. The build must connect to an Amazon RDS database in a private subnet to run integration tests. After the team configures the CodeBuild project to run in the VPC, the build can no longer download dependencies from the internet or upload logs. What should the DevOps engineer do?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Assign a public IP address to the CodeBuild project."
+        },
+        {
+          "lettre": "B",
+          "texte": "Configure the CodeBuild project to use private subnets that route outbound traffic through a NAT gateway."
+        },
+        {
+          "lettre": "C",
+          "texte": "Move the RDS database to a public subnet."
+        },
+        {
+          "lettre": "D",
+          "texte": "Configure the CodeBuild project to use public subnets with an internet gateway."
+        }
+      ]
+    },
+    {
+      "id": "Q008",
+      "numero": 8,
+      "lot": 1,
+      "titre": "Which solution meets these requirements with the LEAST operational overhead?",
+      "theme": "sdlc_automation",
+      "theme_libelle": "SDLC Automation",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create an AWS CodeArtifact domain and repositories with upstream connections to the public npm and PyPI repositories.",
+      "options_correctes": [],
+      "explication": "CodeArtifact est fait pour ça : un dépôt managé avec des connexions upstream vers npmjs et PyPI, et un cache. A fonctionne mais demande de gérer des serveurs, donc pas le moins d'overhead. B est du code maison avec un cron. D, ECR n'est pas un gestionnaire de packages npm ou pip.",
+      "enonce": "A company's development teams use many open source npm and Python packages. The security team wants to centrally control which external package versions can be used, cache them inside AWS, and give builds a single source for dependencies. Which solution meets these requirements with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Run a Nexus repository manager on Amazon EC2 instances in an Auto Scaling group."
+        },
+        {
+          "lettre": "B",
+          "texte": "Mirror the packages to an Amazon S3 bucket with a scheduled Lambda function."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create an AWS CodeArtifact domain and repositories with upstream connections to the public npm and PyPI repositories."
+        },
+        {
+          "lettre": "D",
+          "texte": "Store the packages in Amazon ECR as OCI artifacts."
+        }
+      ]
+    },
+    {
+      "id": "Q009",
+      "numero": 9,
+      "lot": 2,
+      "titre": "Which solution meets these requirements with the LEAST operational overhead?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create a CloudFormation StackSet with service-managed permissions, target the Workloads OU, and enable automatic deployment.",
+      "options_correctes": [],
+      "explication": "Comptes futurs, c'est le mot-clé : StackSets en service-managed, ciblé sur l'OU, avec l'automatic deployment. A demande une action manuelle à chaque nouveau compte. C fonctionne mais c'est du code maison. D n'existe pas : RAM ne partage pas de templates CloudFormation.",
+      "enonce": "A company uses AWS Organizations. The security team must deploy a standard set of IAM roles and AWS Config rules to every account in the Workloads organizational unit, including any accounts that are added to the OU in the future. Which solution meets these requirements with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a CloudFormation StackSet with self-managed permissions and add each new account ID when it is created."
+        },
+        {
+          "lettre": "B",
+          "texte": "Create a CloudFormation StackSet with service-managed permissions, target the Workloads OU, and enable automatic deployment."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use an EventBridge rule on the CreateAccount event to invoke a Lambda function that deploys a CloudFormation stack in the new account."
+        },
+        {
+          "lettre": "D",
+          "texte": "Share the CloudFormation template through AWS RAM with the Workloads OU."
+        }
+      ]
+    },
+    {
+      "id": "Q010",
+      "numero": 10,
+      "lot": 2,
+      "titre": "What should the DevOps engineer do?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "D"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create a Lambda-backed custom resource in the eu-west-1 stack that reads the value from us-east-1.",
+      "options_correctes": [],
+      "explication": "Les exports et Fn Import Value ne fonctionnent que dans la même région, donc A est faux. Une référence dynamique SSM lit seulement dans la région de la stack, donc B est faux. Une nested stack vit dans la même région que sa parente. La custom resource Lambda peut appeler l'API de n'importe quelle région.",
+      "enonce": "A CloudFormation stack in us-east-1 creates a shared VPC and exports its ID. A team wants to reference this VPC ID from a stack deployed in eu-west-1. What should the DevOps engineer do?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use the Fn ImportValue function in the eu-west-1 stack."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use a dynamic reference to an SSM parameter stored in us-east-1."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use a nested stack in eu-west-1 that points to the us-east-1 stack."
+        },
+        {
+          "lettre": "D",
+          "texte": "Create a Lambda-backed custom resource in the eu-west-1 stack that reads the value from us-east-1."
+        }
+      ]
+    },
+    {
+      "id": "Q011",
+      "numero": 11,
+      "lot": 2,
+      "titre": "How should the DevOps engineer fix this?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Add a CreationPolicy to the instance with a timeout, and call cfn-signal at the end of the user data script.",
+      "options_correctes": [],
+      "explication": "La Creation Policy fait attendre CloudFormation jusqu'à recevoir le signal de cfn signal. B, Depends On attend seulement que la ressource soit créée, pas que l'application soit prête. C, une attente fixe, c'est fragile. D concerne les mises à jour d'un Auto Scaling group, pas la création.",
+      "enonce": "A company launches EC2 instances with CloudFormation. A user data script installs and configures the application, which takes about ten minutes. The stack currently reports CREATE COMPLETE before the application is ready, which causes downstream failures. How should the DevOps engineer fix this?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Add a CreationPolicy to the instance with a timeout, and call cfn-signal at the end of the user data script."
+        },
+        {
+          "lettre": "B",
+          "texte": "Add a DependsOn attribute to the downstream resources."
+        },
+        {
+          "lettre": "C",
+          "texte": "Add a WaitCondition with a ten minute sleep in the template."
+        },
+        {
+          "lettre": "D",
+          "texte": "Configure an UpdatePolicy with WaitOnResourceSignals set to true."
+        }
+      ]
+    },
+    {
+      "id": "Q012",
+      "numero": 12,
+      "lot": 2,
+      "titre": "Which solution meets this requirement?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use AWS Systems Manager State Manager with an association that runs on a schedule.",
+      "options_correctes": [],
+      "explication": "Réappliquer une configuration périodiquement, c'est la définition de State Manager. A le fait avec un cron maison, donc plus d'overhead. C et D détectent seulement, ils ne corrigent rien. Et la drift detection CloudFormation ne regarde pas ce qui est installé à l'intérieur des instances.",
+      "enonce": "A company has hundreds of EC2 instances across several accounts. Over time, engineers make manual changes that cause configuration drift. The company wants a required agent configuration to be reapplied automatically every thirty minutes. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use AWS Systems Manager Run Command with a cron job on a management instance."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use AWS Systems Manager State Manager with an association that runs on a schedule."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use AWS Config to detect drift and send an email notification."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use CloudFormation drift detection on the stacks that created the instances."
+        }
+      ]
+    },
+    {
+      "id": "Q013",
+      "numero": 13,
+      "lot": 2,
+      "titre": "Which solution meets these requirements?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create AWS Service Catalog products from CloudFormation templates, add them to a portfolio, and assign a launch constraint with an IAM role that has the required permissions.",
+      "options_correctes": [],
+      "explication": "La launch constraint est la clé : c'est le rôle de Service Catalog qui crée les ressources, pas le développeur. B oblige les développeurs à avoir les permissions sur les ressources. C, une boundary n'accorde rien, et de toute façon on veut justement qu'ils n'aient pas ces droits. D crée des comptes, pas des environnements applicatifs.",
+      "enonce": "Developers need to provision approved environments by themselves, including an Amazon RDS database and EC2 instances. The developers must not have IAM permissions to create these resources directly. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create AWS Service Catalog products from CloudFormation templates, add them to a portfolio, and assign a launch constraint with an IAM role that has the required permissions."
+        },
+        {
+          "lettre": "B",
+          "texte": "Give developers access to the CloudFormation console and a library of templates in an S3 bucket."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create an IAM permissions boundary that allows the developers to create RDS and EC2 resources."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use AWS Control Tower Account Factory to create a new account for each environment."
+        }
+      ]
+    },
+    {
+      "id": "Q014",
+      "numero": 14,
+      "lot": 2,
+      "titre": "Which solution requires the LEAST effort?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Update the launch template and start an instance refresh with a minimum healthy percentage of ninety, using checkpoints.",
+      "options_correctes": [],
+      "explication": "L'instance refresh est fait pour ça : pourcentage minimum d'instances saines, checkpoints, et rollback. A et B sont manuels ou scriptés. D ne remplace rien : les instances existantes gardent l'ancienne AMI jusqu'à ce qu'elles disparaissent.",
+      "enonce": "A company publishes a new hardened AMI every month. The company needs to replace all instances in an Auto Scaling group with the new AMI, while keeping at least ninety percent of the capacity healthy, and with the ability to stop and roll back if problems occur. Which solution requires the LEAST effort?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a new Auto Scaling group with the new AMI and switch the load balancer target group manually."
+        },
+        {
+          "lettre": "B",
+          "texte": "Update the launch template and terminate instances one at a time with a script."
+        },
+        {
+          "lettre": "C",
+          "texte": "Update the launch template and start an instance refresh with a minimum healthy percentage of ninety, using checkpoints."
+        },
+        {
+          "lettre": "D",
+          "texte": "Update the launch template and wait for the Auto Scaling group to replace instances naturally over time."
+        }
+      ]
+    },
+    {
+      "id": "Q015",
+      "numero": 15,
+      "lot": 2,
+      "titre": "Which combination of actions will resolve the issue?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "A",
+        "C"
+      ],
+      "nb_reponses_attendues": 2,
+      "reponse_note": null,
+      "solution": null,
+      "options_correctes": [
+        {
+          "lettre": "A",
+          "texte": "Attach an instance profile that includes the AmazonSSMManagedInstanceCore policy."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create interface VPC endpoints for ssm, ssmmessages and ec2messages."
+        }
+      ],
+      "explication": "Les trois conditions sont l'agent, le rôle IAM et la connectivité. L'agent tourne déjà. Il reste le rôle, et le réseau : sans NAT, il faut les VPC endpoints. B est faux : SSM n'utilise pas de connexion entrante, l'agent sort vers le service. D n'a rien à voir.",
+      "enonce": "An EC2 instance in a private subnet does not appear as a managed node in AWS Systems Manager Fleet Manager. The SSM Agent is installed and running. The subnet has no NAT gateway. Which combination of actions will resolve the issue? (Choose TWO.)",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Attach an instance profile that includes the AmazonSSMManagedInstanceCore policy."
+        },
+        {
+          "lettre": "B",
+          "texte": "Open inbound port 22 in the instance security group."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create interface VPC endpoints for ssm, ssmmessages and ec2messages."
+        },
+        {
+          "lettre": "D",
+          "texte": "Install the CloudWatch agent on the instance."
+        }
+      ]
+    },
+    {
+      "id": "Q016",
+      "numero": 16,
+      "lot": 2,
+      "titre": "Which solution meets this requirement?",
+      "theme": "config_management_iac",
+      "theme_libelle": "Configuration Management & IaC",
+      "statut": "complete",
+      "reponses": [
+        "D"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Attach a service control policy to the organization root that denies the StopLogging and DeleteTrail actions.",
+      "options_correctes": [],
+      "explication": "Une SCP s'impose à tout le monde dans les comptes membres, admin compris, et l'admin du compte ne peut pas la retirer. A et C peuvent être modifiés ou retirés par un administrateur du compte. B détecte, mais n'empêche pas. Et rappel : une SCP ne s'applique pas au compte de gestion, c'est pour ça que la question parle des comptes membres.",
+      "enonce": "The security team must ensure that no IAM user or role in any member account, including administrators, can disable AWS CloudTrail or delete trails. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Attach an IAM policy that denies the StopLogging and DeleteTrail actions to every administrator role."
+        },
+        {
+          "lettre": "B",
+          "texte": "Configure an AWS Config rule that detects when CloudTrail is disabled."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use an IAM permissions boundary on all administrator roles."
+        },
+        {
+          "lettre": "D",
+          "texte": "Attach a service control policy to the organization root that denies the StopLogging and DeleteTrail actions."
+        }
+      ]
+    },
+    {
+      "id": "Q017",
+      "numero": 17,
+      "lot": 3,
+      "titre": "Which solution meets these requirements?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create an Aurora global database with a secondary cluster in us-west-2. Keep an AMI and a launch template ready in us-west-2, and scale out the application tier during a disaster.",
+      "options_correctes": [],
+      "explication": "C'est du pilot light : les données sont chaudes grâce à Aurora Global Database, avec un RPO de l'ordre de la seconde, et le compute est froid mais prêt. A a un RPO d'une journée. C tient les objectifs mais coûte bien trop cher. D reste dans la même région, ça ne protège pas d'une panne régionale.",
+      "enonce": "A company runs a critical application on Amazon EC2 instances with an Amazon Aurora MySQL database in us-east-1. The company needs a disaster recovery solution in us-west-2 with an RPO of a few seconds and an RTO of less than thirty minutes. The solution must be as cost-effective as possible. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use AWS Backup to copy daily snapshots to us-west-2, and restore them during a disaster."
+        },
+        {
+          "lettre": "B",
+          "texte": "Create an Aurora global database with a secondary cluster in us-west-2. Keep an AMI and a launch template ready in us-west-2, and scale out the application tier during a disaster."
+        },
+        {
+          "lettre": "C",
+          "texte": "Run a full-size copy of the application and database in us-west-2 that serves traffic at all times."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use an Aurora read replica in the same Region and promote it during a disaster."
+        }
+      ]
+    },
+    {
+      "id": "Q018",
+      "numero": 18,
+      "lot": 3,
+      "titre": "Which solution meets these requirements?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use AWS Global Accelerator with endpoint groups in both Regions.",
+      "options_correctes": [],
+      "explication": "Trois indices : UDP, quelques secondes, et des IP fixes. Global Accelerator coche les trois. Route 53 dépend du cache DNS, et ne donne pas d'IP fixes. CloudFront et l'ALB ne gèrent pas l'UDP.",
+      "enonce": "A company runs a multiplayer game that uses UDP traffic, with endpoints in two AWS Regions. During a regional failure, players must be redirected to the healthy Region within seconds. Players' firewalls only allow a fixed set of IP addresses. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use AWS Global Accelerator with endpoint groups in both Regions."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use Amazon Route 53 failover routing with health checks and a TTL of sixty seconds."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use Amazon CloudFront with an origin group for failover."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use an Application Load Balancer in each Region with Route 53 latency routing."
+        }
+      ]
+    },
+    {
+      "id": "Q019",
+      "numero": 19,
+      "lot": 3,
+      "titre": "How should the DevOps engineer fix this with the LEAST effort?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Change the health check type of the Auto Scaling group from EC2 to ELB.",
+      "options_correctes": [],
+      "explication": "Avec le type EC2, l'Auto Scaling group regarde seulement si la machine tourne. Avec le type ELB, il utilise le health check du load balancer, et remplace l'instance. A et B sont du code maison. D retarde les vérifications, ça ne règle rien.",
+      "enonce": "An application runs on EC2 instances in an Auto Scaling group behind an Application Load Balancer. Sometimes the application process crashes, but the instance keeps running. The load balancer marks the instance as unhealthy, but the Auto Scaling group does not replace it. How should the DevOps engineer fix this with the LEAST effort?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a CloudWatch alarm on the UnHealthyHostCount metric that invokes a Lambda function to terminate the instance."
+        },
+        {
+          "lettre": "B",
+          "texte": "Install a script on each instance that restarts the application process."
+        },
+        {
+          "lettre": "C",
+          "texte": "Change the health check type of the Auto Scaling group from EC2 to ELB."
+        },
+        {
+          "lettre": "D",
+          "texte": "Increase the health check grace period of the Auto Scaling group."
+        }
+      ]
+    },
+    {
+      "id": "Q020",
+      "numero": 20,
+      "lot": 3,
+      "titre": "Which solution meets this requirement?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use AWS Backup Vault Lock in compliance mode.",
+      "options_correctes": [],
+      "explication": "Le mode compliance est irréversible après le délai de grâce : personne, même root, ne peut supprimer. En governance, un utilisateur avec une permission spéciale peut contourner. A, une politique peut être modifiée par un administrateur. D ne protège pas vraiment.",
+      "enonce": "A company must protect its backups against deletion, including deletion by users with administrator access and by the root user, to meet a regulatory requirement. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use AWS Backup with a vault access policy that denies DeleteRecoveryPoint for all IAM users."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use AWS Backup Vault Lock in compliance mode."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use AWS Backup Vault Lock in governance mode."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable MFA on the root user and remove administrator access from all users."
+        }
+      ]
+    },
+    {
+      "id": "Q021",
+      "numero": 21,
+      "lot": 3,
+      "titre": "Which solution will MOST effectively solve these problems?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "D"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Place Amazon RDS Proxy between the Lambda functions and the database.",
+      "options_correctes": [],
+      "explication": "RDS Proxy mutualise les connexions, et réduit le temps de failover. A repousse le problème sans le régler. B ne gère pas les écritures. C bride l'application à une seule exécution à la fois, ce qui casse les performances.",
+      "enonce": "A serverless application uses AWS Lambda functions that connect to an Amazon RDS for PostgreSQL database. During traffic spikes, the database reaches its maximum number of connections and the application fails. After a Multi-AZ failover, the reconnection storm causes further errors. Which solution will MOST effectively solve these problems?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Increase the max connections parameter of the database."
+        },
+        {
+          "lettre": "B",
+          "texte": "Add a read replica and send all queries to it."
+        },
+        {
+          "lettre": "C",
+          "texte": "Set the reserved concurrency of the Lambda functions to one."
+        },
+        {
+          "lettre": "D",
+          "texte": "Place Amazon RDS Proxy between the Lambda functions and the database."
+        }
+      ]
+    },
+    {
+      "id": "Q022",
+      "numero": 22,
+      "lot": 3,
+      "titre": "What should the DevOps engineer do FIRST?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Increase the visibility timeout to more than the maximum processing time.",
+      "options_correctes": [],
+      "explication": "Le traitement dure deux minutes, mais le message redevient visible après trente secondes. Un autre consommateur le reprend, d'où le double traitement. B change de type de file, mais ne règle pas la cause. C réduit les appels à vide, sans rapport. D enverrait des messages valides dans la DLQ.",
+      "enonce": "An order processing application uses an Amazon SQS standard queue. Some orders are processed twice. Processing an order takes up to two minutes, and the visibility timeout of the queue is thirty seconds. What should the DevOps engineer do FIRST?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Increase the visibility timeout to more than the maximum processing time."
+        },
+        {
+          "lettre": "B",
+          "texte": "Convert the queue to a FIFO queue."
+        },
+        {
+          "lettre": "C",
+          "texte": "Enable long polling on the queue."
+        },
+        {
+          "lettre": "D",
+          "texte": "Add a dead letter queue with a max receive count of one."
+        }
+      ]
+    },
+    {
+      "id": "Q023",
+      "numero": 23,
+      "lot": 3,
+      "titre": "Which strategy should the company use?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Backup and restore",
+      "options_correctes": [],
+      "explication": "Quatre heures de RTO et une journée de RPO : c'est large. La stratégie la moins chère qui tient les objectifs, c'est Backup and Restore. Les trois autres tiennent aussi, mais coûtent plus. La consigne : pas la plus robuste, la moins chère qui suffit.",
+      "enonce": "A company has a stateless web application with a recovery time objective of four hours and a recovery point objective of twenty four hours. Leadership wants the lowest possible cost for disaster recovery. Which strategy should the company use?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Pilot light"
+        },
+        {
+          "lettre": "B",
+          "texte": "Warm standby"
+        },
+        {
+          "lettre": "C",
+          "texte": "Backup and restore"
+        },
+        {
+          "lettre": "D",
+          "texte": "Multi-site active active"
+        }
+      ]
+    },
+    {
+      "id": "Q024",
+      "numero": 24,
+      "lot": 3,
+      "titre": "Which service should the company use?",
+      "theme": "resilient_cloud_solutions",
+      "theme_libelle": "Resilient Cloud Solutions",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "AWS Fault Injection Service with stop conditions based on CloudWatch alarms",
+      "options_correctes": [],
+      "explication": "Injecter des pannes, c'est FIS, et les stop conditions sont des alarmes CloudWatch. Resilience Hub évalue l'architecture par rapport aux objectifs, il peut lancer des tests FIS, mais l'outil d'injection, c'est FIS. Les readiness checks vérifient que la région de secours est prête, sans injecter de panne. Les canaries surveillent, ils ne cassent rien.",
+      "enonce": "A company wants to verify that its multi-Region failover actually works, by safely injecting failures such as terminating instances and adding network latency, and by stopping the experiment automatically if a business metric degrades too much. Which service should the company use?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "AWS Resilience Hub"
+        },
+        {
+          "lettre": "B",
+          "texte": "AWS Fault Injection Service with stop conditions based on CloudWatch alarms"
+        },
+        {
+          "lettre": "C",
+          "texte": "Amazon Route 53 Application Recovery Controller readiness checks"
+        },
+        {
+          "lettre": "D",
+          "texte": "CloudWatch Synthetics canaries"
+        }
+      ]
+    },
+    {
+      "id": "Q025",
+      "numero": 25,
+      "lot": 4,
+      "titre": "Which solution meets this requirement?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use AWS Systems Manager to install the CloudWatch agent configured to collect memory metrics, and create an alarm on the custom metric.",
+      "options_correctes": [],
+      "explication": "La mémoire n'est jamais collectée nativement sur EC2, il faut l'agent CloudWatch. A est le piège : cette métrique n'existe pas dans le namespace EC2. B, le detailed monitoring donne des métriques toutes les minutes, mais toujours pas la mémoire. D, les Flow Logs parlent de réseau.",
+      "enonce": "A company wants to receive an alert when the memory utilization of its Amazon EC2 instances exceeds eighty percent. The instances run Amazon Linux. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a CloudWatch alarm on the MemoryUtilization metric in the AWS EC2 namespace."
+        },
+        {
+          "lettre": "B",
+          "texte": "Enable detailed monitoring on the instances and create an alarm on memory utilization."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use AWS Systems Manager to install the CloudWatch agent configured to collect memory metrics, and create an alarm on the custom metric."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable VPC Flow Logs and create a metric filter for memory usage."
+        }
+      ]
+    },
+    {
+      "id": "Q026",
+      "numero": 26,
+      "lot": 4,
+      "titre": "Which solution meets this requirement with the LEAST operational overhead?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create a subscription filter on the log group that sends the logs to Amazon OpenSearch Service.",
+      "options_correctes": [],
+      "explication": "Temps réel, c'est un subscription filter. B, l'export S3 est du batch, avec jusqu'à douze heures de latence. C, un metric filter produit des chiffres, pas les lignes de log. D, SQS n'est pas une cible possible pour les logs.",
+      "enonce": "A company needs to stream application logs from Amazon CloudWatch Logs to Amazon OpenSearch Service in near real time for analysis. Which solution meets this requirement with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a subscription filter on the log group that sends the logs to Amazon OpenSearch Service."
+        },
+        {
+          "lettre": "B",
+          "texte": "Export the log group to Amazon S3 every hour, and load the files into OpenSearch with a Lambda function."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create a metric filter on the log group and send the metric to OpenSearch."
+        },
+        {
+          "lettre": "D",
+          "texte": "Configure an SQS queue as the destination of the log group and poll it from an EC2 instance."
+        }
+      ]
+    },
+    {
+      "id": "Q027",
+      "numero": 27,
+      "lot": 4,
+      "titre": "Which solution meets this requirement?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "In the central account, create a CloudWatch Logs destination backed by Amazon Kinesis Data Firehose, with a destination policy that allows the application accounts. In each application account, create a subscription filter that targets this destination.",
+      "options_correctes": [],
+      "explication": "Le pattern de centralisation : une destination dans le compte central, adossée à Kinesis Data Streams ou Firehose, avec une destination policy, et un subscription filter dans chaque compte. A, une destination cross-compte ne peut pas être une Lambda. C n'est pas du temps réel. D affiche, mais ne livre rien.",
+      "enonce": "A company has fifty AWS accounts. The security team wants all CloudWatch Logs from application accounts to be delivered to a central logging account in near real time. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "In each account, create a subscription filter that sends logs to a Lambda function in the central account."
+        },
+        {
+          "lettre": "B",
+          "texte": "In the central account, create a CloudWatch Logs destination backed by Amazon Kinesis Data Firehose, with a destination policy that allows the application accounts. In each application account, create a subscription filter that targets this destination."
+        },
+        {
+          "lettre": "C",
+          "texte": "Export the logs from each account to an S3 bucket in the central account every day."
+        },
+        {
+          "lettre": "D",
+          "texte": "Create a CloudWatch dashboard in the central account that displays logs from all accounts."
+        }
+      ]
+    },
+    {
+      "id": "Q028",
+      "numero": 28,
+      "lot": 4,
+      "titre": "What should the DevOps engineer do?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Set the treat missing data parameter of the alarm to notBreaching.",
+      "options_correctes": [],
+      "explication": "Pas de donnée veut dire pas d'erreur, donc il faut traiter les données manquantes comme non critiques : not breaching. B ferait passer l'alarme en ALARM à chaque période sans erreur. C et D ne changent pas le traitement des données manquantes.",
+      "enonce": "A CloudWatch alarm monitors a custom metric that is published only when the application records an error. When there are no errors, the alarm goes to the INSUFFICIENT DATA state, which confuses the operations team. The alarm should be in the OK state when no data is published. What should the DevOps engineer do?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Set the treat missing data parameter of the alarm to notBreaching."
+        },
+        {
+          "lettre": "B",
+          "texte": "Set the treat missing data parameter of the alarm to breaching."
+        },
+        {
+          "lettre": "C",
+          "texte": "Increase the number of evaluation periods."
+        },
+        {
+          "lettre": "D",
+          "texte": "Publish the metric with high resolution."
+        }
+      ]
+    },
+    {
+      "id": "Q029",
+      "numero": 29,
+      "lot": 4,
+      "titre": "Which service provides this information?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "D"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "AWS CloudTrail",
+      "options_correctes": [],
+      "explication": "Qui a fait quoi, quand, et depuis où : CloudTrail. Delete Bucket est un management event, enregistré par défaut. Config montrerait que le bucket a disparu, mais pas qui l'a supprimé. GuardDuty cherche des menaces. Les Flow Logs ne voient pas les appels d'API.",
+      "enonce": "A security engineer must find out which IAM principal deleted an Amazon S3 bucket yesterday, and from which IP address. Which service provides this information?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "AWS Config"
+        },
+        {
+          "lettre": "B",
+          "texte": "Amazon GuardDuty"
+        },
+        {
+          "lettre": "C",
+          "texte": "VPC Flow Logs"
+        },
+        {
+          "lettre": "D",
+          "texte": "AWS CloudTrail"
+        }
+      ]
+    },
+    {
+      "id": "Q030",
+      "numero": 30,
+      "lot": 4,
+      "titre": "Which solution meets this requirement with the LEAST effort?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create a composite alarm with an AND condition on the two alarms, and configure the SNS action only on the composite alarm.",
+      "options_correctes": [],
+      "explication": "La composite alarm combine des alarmes avec ET et OU, c'est exactement le besoin. A, c'est du polling maison. C, additionner une latence et un CPU n'a pas de sens. D réduit le bruit au hasard, sans respecter la condition.",
+      "enonce": "An on-call team receives too many pages. The team wants to be paged only when both the API latency alarm and the database CPU alarm are in the ALARM state at the same time. Which solution meets this requirement with the LEAST effort?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a Lambda function that checks both alarms every minute and sends a notification."
+        },
+        {
+          "lettre": "B",
+          "texte": "Create a composite alarm with an AND condition on the two alarms, and configure the SNS action only on the composite alarm."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use metric math to add the two metrics and create an alarm on the sum."
+        },
+        {
+          "lettre": "D",
+          "texte": "Increase the threshold of both alarms."
+        }
+      ]
+    },
+    {
+      "id": "Q031",
+      "numero": 31,
+      "lot": 4,
+      "titre": "Which solution meets this requirement?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create a CloudWatch Synthetics canary that runs a GUI workflow script every five minutes, and alarm on its success metric.",
+      "options_correctes": [],
+      "explication": "Simuler un utilisateur depuis l'extérieur, toutes les cinq minutes : un canary Synthetics, avec un script de parcours d'interface. B dépend de vrais utilisateurs, donc ne détecte rien avant eux. C vérifie seulement qu'une page répond, sans faire de login. D trace les requêtes, mais ne génère pas de trafic.",
+      "enonce": "A company wants to detect when its public website login page stops working, before customers report the problem. The check must run every five minutes and simulate a user logging in. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create a CloudWatch Synthetics canary that runs a GUI workflow script every five minutes, and alarm on its success metric."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use CloudWatch RUM to collect data from real user sessions."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create a Route 53 health check on the home page."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable AWS X-Ray tracing on the application."
+        }
+      ]
+    },
+    {
+      "id": "Q032",
+      "numero": 32,
+      "lot": 4,
+      "titre": "Which solution meets these requirements?",
+      "theme": "monitoring_logging",
+      "theme_libelle": "Monitoring & Logging",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Add the customer ID as an annotation in AWS X-Ray segments, and use the service map and trace filters.",
+      "options_correctes": [],
+      "explication": "X-Ray et sa service map identifient le service qui ralentit. Et pour filtrer par client, il faut une annotation, parce que les annotations sont indexées. A est le piège : les metadata ne sont pas indexées, on ne peut pas filtrer dessus. B est possible, mais manuel et service par service. D ne voit pas la latence applicative.",
+      "enonce": "A microservices application has high latency on some requests. The team needs to identify which downstream service causes the delay, and filter traces by customer ID. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Add the customer ID as metadata in AWS X-Ray segments."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use CloudWatch Logs Insights to search for slow requests in each service's logs."
+        },
+        {
+          "lettre": "C",
+          "texte": "Add the customer ID as an annotation in AWS X-Ray segments, and use the service map and trace filters."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable VPC Flow Logs and analyze them with Amazon Athena."
+        }
+      ]
+    },
+    {
+      "id": "Q033",
+      "numero": 33,
+      "lot": 5,
+      "titre": "Which solution meets this requirement with the LEAST operational overhead?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create an Amazon EventBridge rule for AWS Health events of type AWS RISK CREDENTIALS EXPOSED that invokes a Lambda function to disable the key and publish to an SNS topic.",
+      "options_correctes": [],
+      "explication": "AWS publie lui-même l'événement Health Risk Credentials Exposed. Une règle EventBridge et une Lambda font le reste. A, c'est du polling maison. C, Macie analyse S3, pas les dépôts de code. D traite les clés inutilisées, pas les clés exposées.",
+      "enonce": "A company wants to automatically disable any IAM access key that AWS detects as exposed on a public code repository, and notify the security team. Which solution meets this requirement with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Run a Lambda function every hour that searches public GitHub repositories for the company's access keys."
+        },
+        {
+          "lettre": "B",
+          "texte": "Create an Amazon EventBridge rule for AWS Health events of type AWS RISK CREDENTIALS EXPOSED that invokes a Lambda function to disable the key and publish to an SNS topic."
+        },
+        {
+          "lettre": "C",
+          "texte": "Enable Amazon Macie to scan code repositories for access keys."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use IAM Access Analyzer to find unused access keys and delete them."
+        }
+      ]
+    },
+    {
+      "id": "Q034",
+      "numero": 34,
+      "lot": 5,
+      "titre": "What should the DevOps engineer do?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "D"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Enable ReportBatchItemFailures on the event source mapping and return the IDs of the failed messages from the function.",
+      "options_correctes": [],
+      "explication": "Report Batch Item Failures permet de ne remettre dans la file que les messages en échec. A est le piège : la destination On Failure n'est pas supportée sur un event source mapping SQS, avec SQS c'est la DLQ de la file. B fonctionne mais tue les performances. C ne change rien au rejeu du batch.",
+      "enonce": "An AWS Lambda function processes messages from an Amazon SQS queue in batches of ten. When one message in a batch fails, the whole batch is retried, and messages that were already processed successfully are processed again. What should the DevOps engineer do?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Configure an on failure destination on the Lambda function."
+        },
+        {
+          "lettre": "B",
+          "texte": "Reduce the batch size to one."
+        },
+        {
+          "lettre": "C",
+          "texte": "Increase the visibility timeout of the queue."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable ReportBatchItemFailures on the event source mapping and return the IDs of the failed messages from the function."
+        }
+      ]
+    },
+    {
+      "id": "Q035",
+      "numero": 35,
+      "lot": 5,
+      "titre": "What should the DevOps engineer do to return the stack to a working state?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Run continue update rollback and specify the security group in resources to skip.",
+      "options_correctes": [],
+      "explication": "Continue Update Rollback, en sautant la ressource qui n'existe plus. A fonctionne, mais détruit tout, ce n'est jamais la meilleure réponse. C est impossible : une stack dans cet état n'accepte pas de mise à jour. D n'a aucun rapport.",
+      "enonce": "An AWS CloudFormation stack update failed, and the rollback also failed. The stack is now in the UPDATE ROLLBACK FAILED state, because an engineer manually deleted a security group that the stack manages. What should the DevOps engineer do to return the stack to a working state?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Delete the stack and recreate it."
+        },
+        {
+          "lettre": "B",
+          "texte": "Run continue update rollback and specify the security group in resources to skip."
+        },
+        {
+          "lettre": "C",
+          "texte": "Run a new update on the stack with the original template."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable termination protection and retry the update."
+        }
+      ]
+    },
+    {
+      "id": "Q036",
+      "numero": 36,
+      "lot": 5,
+      "titre": "Which combination of actions will resolve the issue?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "B",
+        "C"
+      ],
+      "nb_reponses_attendues": 2,
+      "reponse_note": null,
+      "solution": null,
+      "options_correctes": [
+        {
+          "lettre": "B",
+          "texte": "Make sure the task execution role has the AmazonECSTaskExecutionRolePolicy managed policy."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create VPC endpoints for ECR API, ECR Docker, and a gateway endpoint for Amazon S3."
+        }
+      ],
+      "explication": "C'est ECS qui tire l'image, donc il faut l'execution role, pas le task role. A est le piège classique. Et sans NAT, il faut des VPC endpoints pour ECR, plus un gateway endpoint S3, parce que les couches des images sont stockées dans S3. D n'a rien à voir avec le téléchargement de l'image.",
+      "enonce": "An Amazon ECS service on AWS Fargate fails to start new tasks. The stopped reason shows CannotPullContainerError. The image is stored in Amazon ECR in the same account. The tasks run in private subnets without a NAT gateway. Which combination of actions will resolve the issue? (Choose TWO.)",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Add ECR permissions to the task role."
+        },
+        {
+          "lettre": "B",
+          "texte": "Make sure the task execution role has the AmazonECSTaskExecutionRolePolicy managed policy."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create VPC endpoints for ECR API, ECR Docker, and a gateway endpoint for Amazon S3."
+        },
+        {
+          "lettre": "D",
+          "texte": "Increase the CPU and memory of the task definition."
+        }
+      ]
+    },
+    {
+      "id": "Q037",
+      "numero": 37,
+      "lot": 5,
+      "titre": "Which solution meets this requirement with the LEAST operational overhead?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use the AWS Config managed rule restricted ssh with an automatic remediation that runs an SSM Automation document.",
+      "options_correctes": [],
+      "explication": "Une règle Config managée qui détecte, et une remédiation automatique avec SSM Automation. Aucun code maison. B est du polling. C est lent et ne corrige rien. D, GuardDuty détecte des comportements malveillants, pas des erreurs de configuration.",
+      "enonce": "A company wants to be notified within minutes whenever someone creates a security group rule that allows inbound traffic from anywhere on port twenty two, and wants the rule to be removed automatically. Which solution meets this requirement with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use the AWS Config managed rule restricted ssh with an automatic remediation that runs an SSM Automation document."
+        },
+        {
+          "lettre": "B",
+          "texte": "Schedule a Lambda function every five minutes to list all security groups and remove the rule."
+        },
+        {
+          "lettre": "C",
+          "texte": "Parse CloudTrail log files in Amazon S3 with Amazon Athena every hour."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable Amazon GuardDuty and wait for a finding."
+        }
+      ]
+    },
+    {
+      "id": "Q038",
+      "numero": 38,
+      "lot": 5,
+      "titre": "Which solution meets these requirements?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use AWS Systems Manager Incident Manager with a response plan, contacts, an escalation plan, a chat channel, and an Automation runbook.",
+      "options_correctes": [],
+      "explication": "Engagement, escalade, canal de chat, runbook : c'est la description d'Incident Manager. A notifie tout le monde, sans escalade. B crée un ticket, sans escalade ni astreinte. D détecte des anomalies, mais ne gère pas l'incident.",
+      "enonce": "A company needs a solution that engages the on-call engineer, escalates to a manager if the engineer does not acknowledge within fifteen minutes, opens a chat channel, and runs a diagnostic runbook automatically when a critical CloudWatch alarm fires. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Configure the alarm to publish to an SNS topic subscribed by the whole team."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use AWS Systems Manager OpsCenter to create an OpsItem for the alarm."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use AWS Systems Manager Incident Manager with a response plan, contacts, an escalation plan, a chat channel, and an Automation runbook."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use Amazon DevOps Guru to send insights to the on-call engineer."
+        }
+      ]
+    },
+    {
+      "id": "Q039",
+      "numero": 39,
+      "lot": 5,
+      "titre": "Which combination of settings should the team configure?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Enable BisectBatchOnFunctionError, set MaximumRetryAttempts, and configure an on failure destination on the event source mapping.",
+      "options_correctes": [],
+      "explication": "Bisect coupe le batch en deux pour isoler l'enregistrement fautif, le nombre de retries est limité, et l'enregistrement part vers la destination d'échec. A n'existe pas, un stream Kinesis n'a pas de DLQ. D mélange avec SQS : le visibility timeout n'existe pas dans Kinesis.",
+      "enonce": "A Lambda function consumes records from an Amazon Kinesis data stream. A single malformed record causes the function to fail repeatedly, which blocks processing of the entire shard. The team wants to isolate the bad record and keep processing the other records. Which combination of settings should the team configure?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Configure a dead letter queue on the Kinesis data stream."
+        },
+        {
+          "lettre": "B",
+          "texte": "Increase the batch size and the function timeout."
+        },
+        {
+          "lettre": "C",
+          "texte": "Enable BisectBatchOnFunctionError, set MaximumRetryAttempts, and configure an on failure destination on the event source mapping."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable ReportBatchItemFailures and increase the visibility timeout."
+        }
+      ]
+    },
+    {
+      "id": "Q040",
+      "numero": 40,
+      "lot": 5,
+      "titre": "What is the MOST likely cause?",
+      "theme": "incident_event_response",
+      "theme_libelle": "Incident & Event Response",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "The health check grace period is shorter than the application startup time, so the instances are marked unhealthy before the application is ready.",
+      "options_correctes": [],
+      "explication": "L'application met cinq minutes à démarrer, mais l'Auto Scaling group commence à vérifier la santé après soixante secondes. Le health check ELB échoue, et l'instance est remplacée, en boucle. C est l'inverse : avec le type EC2, l'instance ne serait pas remplacée. A et D ne provoquent pas ce cycle.",
+      "enonce": "An application in an Auto Scaling group behind an Application Load Balancer launches instances that are terminated a few minutes later, in a continuous loop. The application takes about five minutes to start. The health check grace period is sixty seconds. What is the MOST likely cause?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "The launch template uses an outdated AMI."
+        },
+        {
+          "lettre": "B",
+          "texte": "The health check grace period is shorter than the application startup time, so the instances are marked unhealthy before the application is ready."
+        },
+        {
+          "lettre": "C",
+          "texte": "The Auto Scaling group uses the EC2 health check type."
+        },
+        {
+          "lettre": "D",
+          "texte": "The instances do not have an IAM instance profile."
+        }
+      ]
+    },
+    {
+      "id": "Q041",
+      "numero": 41,
+      "lot": 6,
+      "titre": "Which solution meets this requirement?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "A"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Allow the iam CreateRole action only when the iam PermissionsBoundary condition key equals the ARN of an approved permissions boundary policy.",
+      "options_correctes": [],
+      "explication": "C'est le pattern de délégation avec permission boundary : les développeurs peuvent créer des rôles, mais seulement avec la boundary approuvée, donc pas d'escalade. B bloque complètement la création, ce n'est pas le besoin. C, RAM ne partage pas de rôles IAM. D ajoute du MFA, mais ne limite pas les permissions.",
+      "enonce": "A company wants to let developers create IAM roles for their Lambda functions, without allowing them to create roles with more permissions than an approved set. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Allow the iam CreateRole action only when the iam PermissionsBoundary condition key equals the ARN of an approved permissions boundary policy."
+        },
+        {
+          "lettre": "B",
+          "texte": "Attach a service control policy that denies iam CreateRole in the developer accounts."
+        },
+        {
+          "lettre": "C",
+          "texte": "Create the roles centrally and share them with AWS RAM."
+        },
+        {
+          "lettre": "D",
+          "texte": "Require MFA for the iam CreateRole action."
+        }
+      ]
+    },
+    {
+      "id": "Q042",
+      "numero": 42,
+      "lot": 6,
+      "titre": "Which solution meets this requirement with the LEAST operational overhead?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "C"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Add a bucket policy that allows s3 GetObject for all principals with a condition on aws PrincipalOrgID equal to the organization ID.",
+      "options_correctes": [],
+      "explication": "La condition Principal Org ID couvre toute l'organisation, y compris les comptes futurs, sans maintenance. A et B demandent une mise à jour à chaque nouveau compte. D est une faille, toujours faux.",
+      "enonce": "An S3 bucket in a shared services account must be readable by all accounts in the company's AWS organization, including accounts added in the future, and by no one else. Which solution meets this requirement with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Add each account ID to the bucket policy as a principal."
+        },
+        {
+          "lettre": "B",
+          "texte": "Create an IAM role in the bucket account for each member account."
+        },
+        {
+          "lettre": "C",
+          "texte": "Add a bucket policy that allows s3 GetObject for all principals with a condition on aws PrincipalOrgID equal to the organization ID."
+        },
+        {
+          "lettre": "D",
+          "texte": "Make the bucket public and enable S3 server access logging."
+        }
+      ]
+    },
+    {
+      "id": "Q043",
+      "numero": 43,
+      "lot": 6,
+      "titre": "Which solution meets these requirements?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use an EventBridge rule on the GuardDuty finding that starts an automation to replace the instance security groups with an isolation security group that has no rules, create EBS snapshots, and detach the instance from the Auto Scaling group.",
+      "options_correctes": [],
+      "explication": "Isoler avec un security group vide, faire des snapshots pour la forensique, sortir l'instance de l'Auto Scaling group. A détruit les preuves. C est faux : GuardDuty détecte, il ne bloque rien. D ne contient pas la menace et peut effacer des traces en mémoire.",
+      "enonce": "Amazon GuardDuty reports that an EC2 instance is communicating with a known cryptocurrency mining command and control server. The security team wants an automated response that contains the threat while preserving evidence for a forensic investigation. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use an EventBridge rule that invokes a Lambda function to terminate the instance immediately."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use an EventBridge rule on the GuardDuty finding that starts an automation to replace the instance security groups with an isolation security group that has no rules, create EBS snapshots, and detach the instance from the Auto Scaling group."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use GuardDuty to automatically block the traffic."
+        },
+        {
+          "lettre": "D",
+          "texte": "Reboot the instance and rotate its IAM role credentials."
+        }
+      ]
+    },
+    {
+      "id": "Q044",
+      "numero": 44,
+      "lot": 6,
+      "titre": "What should the DevOps engineer do?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Re-encrypt the objects with a customer managed key in account B whose key policy allows account A, and grant kms Decrypt to the application role in account A.",
+      "options_correctes": [],
+      "explication": "La clé AWS managed ne peut pas être utilisée en cross-compte, et sa key policy ne peut pas être modifiée. A est donc impossible. C est nécessaire mais pas suffisant : sans accès à la clé, la lecture échoue quand même. D ne sert à rien si la key policy n'autorise pas le compte A.",
+      "enonce": "An application in account A must decrypt data in an S3 bucket in account B. The objects are encrypted with SSE KMS by using the AWS managed key aws slash s3 in account B. Access to the objects fails. What should the DevOps engineer do?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Add a statement to the key policy of the aws slash s3 key that allows account A."
+        },
+        {
+          "lettre": "B",
+          "texte": "Re-encrypt the objects with a customer managed key in account B whose key policy allows account A, and grant kms Decrypt to the application role in account A."
+        },
+        {
+          "lettre": "C",
+          "texte": "Add a bucket policy that allows account A to read the objects."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use an IAM policy in account A that allows kms Decrypt on all keys."
+        }
+      ]
+    },
+    {
+      "id": "Q045",
+      "numero": 45,
+      "lot": 6,
+      "titre": "Which solution meets these requirements?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Use AWS Security Hub with a delegated administrator, cross Region aggregation, and the CIS standard enabled.",
+      "options_correctes": [],
+      "explication": "Agréger les findings et vérifier un standard comme CIS, c'est Security Hub, avec un delegated admin et l'agrégation cross-région. A, Detective sert à enquêter, pas à agréger ni à vérifier la conformité. C donne des bonnes pratiques, pas les findings de sécurité. D, il faudrait tout construire soi-même.",
+      "enonce": "A company wants a single place to view security findings from Amazon GuardDuty, Amazon Inspector and Amazon Macie for all accounts and all Regions in its organization, and to check compliance against the CIS AWS Foundations Benchmark. Which solution meets these requirements?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Use Amazon Detective with a delegated administrator account."
+        },
+        {
+          "lettre": "B",
+          "texte": "Use AWS Security Hub with a delegated administrator, cross Region aggregation, and the CIS standard enabled."
+        },
+        {
+          "lettre": "C",
+          "texte": "Use AWS Trusted Advisor with organizational view."
+        },
+        {
+          "lettre": "D",
+          "texte": "Use Amazon CloudWatch dashboards in a monitoring account."
+        }
+      ]
+    },
+    {
+      "id": "Q046",
+      "numero": 46,
+      "lot": 6,
+      "titre": "Which solution meets these requirements with the LEAST operational overhead?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "D"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Associate an AWS WAF web ACL with the load balancer, with an IP set rule that blocks the known addresses and a rate-based rule.",
+      "options_correctes": [],
+      "explication": "WAF bloque les IP connues avec un IP set, et la rate-based rule gère les adresses qui envoient trop de requêtes. A est impossible : un security group ne sait pas faire de deny. B est du code maison. C est déjà actif par défaut, et ne protège que des attaques réseau de couche trois et quatre.",
+      "enonce": "A web application behind an Application Load Balancer is receiving malicious traffic from a small set of IP addresses, and from many IPs that send more than two thousand requests in five minutes. Which solution meets these requirements with the LEAST operational overhead?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Add deny rules to the security group of the load balancer."
+        },
+        {
+          "lettre": "B",
+          "texte": "Write a Lambda function that parses the access logs and updates network ACLs."
+        },
+        {
+          "lettre": "C",
+          "texte": "Enable AWS Shield Standard."
+        },
+        {
+          "lettre": "D",
+          "texte": "Associate an AWS WAF web ACL with the load balancer, with an IP set rule that blocks the known addresses and a rate-based rule."
+        }
+      ]
+    },
+    {
+      "id": "Q047",
+      "numero": 47,
+      "lot": 6,
+      "titre": "Which solution meets this requirement?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "B"
+      ],
+      "nb_reponses_attendues": 1,
+      "reponse_note": null,
+      "solution": "Create an EventBridge rule for the ACM certificate approaching expiration event, with an SNS topic as the target.",
+      "options_correctes": [],
+      "explication": "ACM émet un événement d'expiration proche, à partir de quarante-cinq jours avant. A est le piège : ACM ne renouvelle pas les certificats importés. C est un cron maison. D n'existe pas pour ce besoin.",
+      "enonce": "A company uses a certificate that was imported into AWS Certificate Manager and attached to a load balancer. The company wants to be notified automatically before the certificate expires. Which solution meets this requirement?",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "ACM renews imported certificates automatically, so no action is needed."
+        },
+        {
+          "lettre": "B",
+          "texte": "Create an EventBridge rule for the ACM certificate approaching expiration event, with an SNS topic as the target."
+        },
+        {
+          "lettre": "C",
+          "texte": "Run a cron job on an EC2 instance that checks the certificate expiration date every day."
+        },
+        {
+          "lettre": "D",
+          "texte": "Enable CloudTrail data events for ACM."
+        }
+      ]
+    },
+    {
+      "id": "Q048",
+      "numero": 48,
+      "lot": 6,
+      "titre": "Which combination of actions meets this requirement?",
+      "theme": "security_compliance",
+      "theme_libelle": "Security & Compliance",
+      "statut": "complete",
+      "reponses": [
+        "A",
+        "C"
+      ],
+      "nb_reponses_attendues": 2,
+      "reponse_note": null,
+      "solution": null,
+      "options_correctes": [
+        {
+          "lettre": "A",
+          "texte": "Create an organization trail with log file integrity validation enabled."
+        },
+        {
+          "lettre": "C",
+          "texte": "Deliver the logs to an S3 bucket in a dedicated log archive account with S3 Object Lock enabled."
+        }
+      ],
+      "explication": "La validation d'intégrité, avec les digest files, prouve qu'un fichier n'a pas été modifié. Object Lock dans un compte dédié empêche la suppression. B détecte une activité API anormale, sans rapport avec l'intégrité. D garde les logs, mais ne prouve rien.",
+      "enonce": "An auditor requires proof that AWS CloudTrail log files for all accounts have not been modified or deleted after delivery. Which combination of actions meets this requirement? (Choose TWO.)",
+      "options": [
+        {
+          "lettre": "A",
+          "texte": "Create an organization trail with log file integrity validation enabled."
+        },
+        {
+          "lettre": "B",
+          "texte": "Enable CloudTrail Insights."
+        },
+        {
+          "lettre": "C",
+          "texte": "Deliver the logs to an S3 bucket in a dedicated log archive account with S3 Object Lock enabled."
+        },
+        {
+          "lettre": "D",
+          "texte": "Send the logs to CloudWatch Logs with a retention of one year."
+        }
+      ]
+    }
+  ]
+}

@@ -1,84 +1,245 @@
 # Épisode 5 — Incident et Event Response (14 %)
-L: Épisode cinq. Incident et Event Response, quatorze pour cent de l'examen.
+@slide title Incident et Event Response
+Épisode 5 · Domaine 5
+14 % de l'examen
+@end
+L: Épisode cinq. {Incident} et {Event Response}, quatorze pour cent de l'examen.
+@slide cards Trois axes
+Événements :: Gérer les sources d'événements et y réagir
+Changements :: Appliquer des changements de configuration en réponse à un événement
+Dépannage :: Trouver la **cause racine** des échecs système et applicatifs
+@end
+@all
 R: Trois axes. Gérer les sources d'événements et y réagir. Appliquer des changements de configuration en réponse à un événement. Et dépanner les échecs système et applicatifs. Les questions ressemblent à : un événement se produit, quelle est la chaîne la plus automatisée pour détecter, notifier et corriger ? Ou bien : le déploiement échoue, quelle est la cause racine ?
-L: Commençons par les sources d'événements. La reine, c'est EventBridge.
-R: Oui. C'est le bus central. Il reçoit les événements de presque tous les services AWS, de partenaires SaaS, et tes propres événements custom avec Put Events. Des règles sur un pattern ou un planning, plusieurs cibles, archive et replay, bus cross-compte. Et EventBridge Pipes : une source, un filtre, un enrichissement, une cible.
-L: Et CloudTrail dans tout ça ?
-R: Chaque appel d'API arrive dans EventBridge comme un événement, AWS API Call via CloudTrail. Ça permet de réagir en quasi temps réel à un Delete Bucket, un Stop Logging, ou à l'ouverture d'un security group.
-L: AWS Health ?
-R: Il émet les pannes AWS, les maintenances planifiées, les retraites d'instances, et un événement très important : les clés d'accès exposées, AWS RISK CREDENTIALS EXPOSED. La source dans EventBridge, c'est aws point health. Et l'organizational view permet d'agréger tous les comptes.
-L: Trusted Advisor ?
-R: Des checks sur le coût, la sécurité, les limites de service. Deux pièges. Ses événements ne sont disponibles que dans la région us-east-1. Et les checks complets demandent un support Business ou supérieur.
+@slide table Les sources d'événements
+Source | Ce qu'elle émet | À retenir
+EventBridge | bus central : AWS, SaaS, custom (PutEvents) | pattern ou planning, archive + replay, Pipes
+CloudTrail → EventBridge | chaque appel d'API | réagir en quasi temps réel
+AWS Health | pannes, maintenances, **clés exposées** | source aws.health · organizational view
+Trusted Advisor | coût, sécurité, limites | événements **us-east-1 uniquement** · support Business+
+Alarmes · Config · GuardDuty… | changements d'état, findings | tout arrive dans EventBridge
+S3 Event Notifications | objet créé / supprimé | SNS, SQS, Lambda · sinon activer EventBridge
+@end
+L: Commençons par les sources d'événements. La reine, c'est {EventBridge}.
+@+
+R: Oui. C'est le bus central. Il reçoit les événements de presque tous les services {AWS}, de partenaires {SaaS}, et tes propres événements {custom} avec {Put Events}. Des règles sur un {pattern} ou un planning, plusieurs cibles, {archive} et {replay}, bus cross-compte. Et {EventBridge Pipes} : une source, un filtre, un enrichissement, une cible.
+L: Et {CloudTrail} dans tout ça ?
+@+
+R: Chaque appel d'{API} arrive dans {EventBridge} comme un événement, {AWS API Call via CloudTrail}. Ça permet de réagir en quasi temps réel à un {Delete Bucket}, un {Stop Logging}, ou à l'ouverture d'un {security group}.
+L: {AWS Health} ?
+@+
+R: Il émet les pannes {AWS}, les maintenances planifiées, les retraites d'instances, et un événement très important : les clés d'accès exposées, {AWS RISK CREDENTIALS EXPOSED}. La source dans {EventBridge}, c'est {aws dot health}. Et l'{organizational view} permet d'agréger tous les comptes.
+L: {Trusted Advisor} ?
+@+
+R: Des {checks} sur le coût, la sécurité, les limites de service. Deux pièges. Ses événements ne sont disponibles que dans la région {us-east-1}. Et les {checks} complets demandent un support {Business} ou supérieur.
 L: Et les autres sources ?
-R: Les alarmes CloudWatch, avec leurs changements d'état. AWS Config, avec les changements de conformité. GuardDuty, Security Hub et Inspector, qui envoient tous leurs findings vers EventBridge. Et S3.
-L: S3 a une particularité.
-R: Les S3 Event Notifications natives ciblent seulement SNS, SQS et Lambda. Pour filtrer plus finement, ou viser d'autres cibles, on active EventBridge sur le bucket.
+@+
+R: Les alarmes {CloudWatch}, avec leurs changements d'état. {AWS Config}, avec les changements de conformité. {GuardDuty}, {Security Hub} et {Inspector}, qui envoient tous leurs {findings} vers {EventBridge}. Et {S3}.
+L: {S3} a une particularité.
+@+
+R: Les {S3 Event Notifications} natives ciblent seulement {SNS}, {SQS} et {Lambda}. Pour filtrer plus finement, ou viser d'autres cibles, on active {EventBridge} sur le bucket.
+@slide flow Le pattern universel d'auto-remédiation
+Source :: service AWS, API, finding, alarme
+Règle EventBridge :: event pattern
+Correction :: Lambda, SSM Automation, Step Functions
+Notification :: SNS
+@end
 L: Le pattern universel d'auto-remédiation ?
-R: Une source, une règle EventBridge avec un pattern, puis Lambda, SSM Automation ou Step Functions pour corriger, et SNS pour notifier.
-L: On passe aux exemples. Je te donne le scénario. Une clé d'accès IAM a été publiée sur GitHub.
+@all
+R: Une source, une règle {EventBridge} avec un {pattern}, puis {Lambda}, {SSM Automation} ou {Step Functions} pour corriger, et {SNS} pour notifier.
+@slide quiz SCÉNARIO
+Une clé d'accès IAM a été publiée sur GitHub.
+> AWS Health **AWS_RISK_CREDENTIALS_EXPOSED** → EventBridge → Lambda / Step Functions : désactiver la clé, lister l'activité CloudTrail, notifier.
+@end
+L: On passe aux exemples. Je te donne le scénario. Une clé d'accès {IAM} a été publiée sur {GitHub}.
 [pause 5]
-R: AWS Health émet l'événement AWS RISK CREDENTIALS EXPOSED. Une règle EventBridge déclenche une Lambda ou une Step Functions qui désactive la clé, liste l'activité récente dans CloudTrail, et notifie.
-L: Quelqu'un désactive CloudTrail.
+@answer
+R: {AWS Health} émet l'événement {AWS RISK CREDENTIALS EXPOSED}. Une règle {EventBridge} déclenche une {Lambda} ou une {Step Functions} qui désactive la clé, liste l'activité récente dans {CloudTrail}, et notifie.
+@slide quiz SCÉNARIO
+Quelqu'un désactive CloudTrail.
+> StopLogging → EventBridge → Lambda qui relance **StartLogging** + alerte. En prévention : une **SCP**.
+@end
+L: Quelqu'un désactive {CloudTrail}.
 [pause 4]
-R: L'appel Stop Logging arrive dans EventBridge. Une Lambda relance Start Logging et envoie une alerte. Et en prévention, une SCP qui interdit Stop Logging.
-L: Une instance EC2 a une retraite planifiée.
+@answer
+R: L'appel {Stop Logging} arrive dans {EventBridge}. Une {Lambda} relance {Start Logging} et envoie une alerte. Et en prévention, une {SCP} qui interdit {Stop Logging}.
+@slide quiz SCÉNARIO
+Une instance EC2 a une retraite planifiée.
+> Événement Health **scheduled change** → EventBridge → SSM Automation stop / start (nouvel hôte).
+@end
+L: Une instance {EC2} a une retraite planifiée.
 [pause 4]
-R: Un événement Health de type scheduled change, une règle EventBridge, et une SSM Automation qui fait un stop puis un start pour migrer l'instance sur un nouvel hôte.
-L: Un security group est ouvert sur le port vingt-deux à tout Internet.
+@answer
+R: Un événement {Health} de type {scheduled change}, une règle {EventBridge}, et une {SSM Automation} qui fait un {stop} puis un {start} pour migrer l'instance sur un nouvel hôte.
+@slide quiz SCÉNARIO
+Un security group est ouvert sur le port 22 à tout Internet.
+> Règle Config **restricted-ssh** + remédiation automatique **SSM Automation**.
+@end
+L: Un {security group} est ouvert sur le port vingt-deux à tout Internet.
 [pause 4]
-R: La règle Config restricted ssh détecte la non-conformité, et une remédiation automatique SSM corrige.
+@answer
+R: La règle {Config} {restricted ssh} détecte la non-conformité, et une remédiation automatique {SSM} corrige.
+@slide table Gérer les échecs en asynchrone
+Service | En cas d'échec | Réglage clé
+SQS | revient après le visibility timeout | maxReceiveCount → **DLQ**, redrive
+SNS | retries selon le protocole | DLQ **par souscription**
+Lambda asynchrone | **2 retries**, âge max 6 h | **Destinations** OnFailure / OnSuccess
+Lambda + SQS | tout le batch revient | **ReportBatchItemFailures** · DLQ **sur la file**
+Lambda + Kinesis / DynamoDB Streams | le **shard est bloqué** | **Bisect**, MaximumRetryAttempts, on-failure destination
+EventBridge · Step Functions | retries 24 h · Retry / Catch | DLQ sur la cible, archive + replay
+@end
 L: Deuxième partie : la gestion des échecs dans le traitement asynchrone. C'est dense.
-R: Oui, on y va service par service. SQS : en cas d'échec, le message réapparaît après le visibility timeout. Après max receive count tentatives, il part dans une dead letter queue. Et le redrive permet de le renvoyer depuis la DLQ.
-L: SNS ?
-R: Des retries selon le protocole, et une DLQ par souscription, qui est une file SQS.
-L: Lambda en invocation asynchrone, par exemple déclenchée par S3, SNS ou EventBridge ?
-R: Deux retries par défaut, configurable de zéro à deux, et un âge maximal de l'événement jusqu'à six heures. Pour gérer les échecs, on préfère les Lambda Destinations, On Failure et On Success, vers SQS, SNS, Lambda ou EventBridge. Elles sont plus riches qu'une DLQ Lambda parce qu'elles gardent le contexte de l'erreur.
-L: Et Lambda qui lit une file SQS ?
-R: C'est un event source mapping. En cas d'échec, tout le batch revient dans la file. Pour ne rejouer que les messages en échec, on active Report Batch Item Failures. Et la DLQ se configure sur la file SQS, pas sur la Lambda.
-L: Question piège. Une Lambda consomme une file SQS. On configure une Lambda Destination On Failure pour récupérer les messages en échec. Est-ce que ça marche ?
+@+
+R: Oui, on y va service par service. {SQS} : en cas d'échec, le message réapparaît après le {visibility timeout}. Après {max receive count} tentatives, il part dans une {dead letter queue}. Et le {redrive} permet de le renvoyer depuis la {DLQ}.
+L: {SNS} ?
+@+
+R: Des {retries} selon le protocole, et une {DLQ} par souscription, qui est une file {SQS}.
+L: {Lambda} en invocation asynchrone, par exemple déclenchée par {S3}, {SNS} ou {EventBridge} ?
+@+
+R: Deux {retries} par défaut, configurable de zéro à deux, et un âge maximal de l'événement jusqu'à six heures. Pour gérer les échecs, on préfère les {Lambda Destinations}, {On Failure} et {On Success}, vers {SQS}, {SNS}, {Lambda} ou {EventBridge}. Elles sont plus riches qu'une {DLQ} {Lambda} parce qu'elles gardent le contexte de l'erreur.
+L: Et {Lambda} qui lit une file {SQS} ?
+@+
+R: C'est un {event source mapping}. En cas d'échec, tout le {batch} revient dans la file. Pour ne rejouer que les messages en échec, on active {Report Batch Item Failures}. Et la {DLQ} se configure sur la file {SQS}, pas sur la {Lambda}.
+@slide quiz QUESTION PIÈGE
+Une Lambda consomme une file SQS. Une Lambda Destination OnFailure récupère-t-elle les messages en échec ?
+> **Non.** Les destinations visent l'asynchrone. Avec SQS : **DLQ sur la file** + ReportBatchItemFailures.
+@end
+L: Question piège. Une {Lambda} consomme une file {SQS}. On configure une {Lambda Destination} {On Failure} pour récupérer les messages en échec. Est-ce que ça marche ?
 [pause 5]
-R: Non. Les destinations concernent les invocations asynchrones. Avec SQS, c'est la file qui gère les échecs : il faut une DLQ sur la file SQS, plus Report Batch Item Failures.
-L: Lambda avec Kinesis ou DynamoDB Streams ?
-R: Là, un batch en échec bloque tout le shard. Les réglages : Bisect Batch On Function Error, pour couper le batch en deux et isoler l'enregistrement fautif. Maximum Retry Attempts. Maximum Record Age In Seconds. Et une on-failure destination.
-L: EventBridge et Step Functions ?
-R: EventBridge réessaie jusqu'à vingt-quatre heures, avec une DLQ SQS sur la cible, et archive plus replay pour rejouer. Step Functions : Retry avec backoff, et Catch, définis pour chaque état.
+@answer
+R: Non. Les destinations concernent les invocations asynchrones. Avec {SQS}, c'est la file qui gère les échecs : il faut une {DLQ} sur la file {SQS}, plus {Report Batch Item Failures}.
+@slide table Gérer les échecs en asynchrone
+Service | En cas d'échec | Réglage clé
+SQS | revient après le visibility timeout | maxReceiveCount → **DLQ**, redrive
+SNS | retries selon le protocole | DLQ **par souscription**
+Lambda asynchrone | **2 retries**, âge max 6 h | **Destinations** OnFailure / OnSuccess
+Lambda + SQS | tout le batch revient | **ReportBatchItemFailures** · DLQ **sur la file**
+Lambda + Kinesis / DynamoDB Streams | le **shard est bloqué** | **Bisect**, MaximumRetryAttempts, on-failure destination
+EventBridge · Step Functions | retries 24 h · Retry / Catch | DLQ sur la cible, archive + replay
+@end
+@+4
+L: {Lambda} avec {Kinesis} ou {DynamoDB Streams} ?
+@+
+R: Là, un {batch} en échec bloque tout le {shard}. Les réglages : {Bisect Batch On Function Error}, pour couper le {batch} en deux et isoler l'enregistrement fautif. {Maximum Retry Attempts}. {Maximum Record Age In Seconds}. Et une {on-failure destination}.
+L: {EventBridge} et {Step Functions} ?
+@+
+R: {EventBridge} réessaie jusqu'à vingt-quatre heures, avec une {DLQ} {SQS} sur la cible, et {archive} plus {replay} pour rejouer. {Step Functions} : {Retry} avec {backoff}, et {Catch}, définis pour chaque état.
+@slide quiz QUESTION
+Des événements ont été perdus suite à un bug : il faut les rejouer.
+> **EventBridge archive + replay**.
+@end
 L: Question. Des événements ont été perdus suite à un bug, il faut les rejouer.
 [pause 3]
-R: EventBridge archive et replay.
+@answer
+R: {EventBridge} {archive} et {replay}.
+@slide cards Outils de gestion d'incident
+Incident Manager :: Response plans, contacts, **escalade**, canal de chat, runbooks SSM Automation, post-incident
+OpsCenter :: Centralise les **OpsItems** avec contexte, ressources et runbooks
+DevOps Guru :: Anomalies opérationnelles par **ML**, **sans seuils** · DevOps Guru for RDS
+@end
 L: Troisième partie : les outils de gestion d'incident.
-R: Systems Manager Incident Manager. Des response plans : qui engager, quel runbook lancer. Des contacts et des plans d'escalade. Des canaux de chat. Des runbooks SSM Automation. Et l'analyse post-incident. Il est déclenché par une alarme CloudWatch ou une règle EventBridge.
-L: Question. Organiser l'astreinte, l'escalade et le runbook pendant un incident.
+@+
+R: {Systems Manager Incident Manager}. Des {response plans} : qui engager, quel {runbook} lancer. Des contacts et des plans d'escalade. Des canaux de chat. Des {runbooks} {SSM Automation}. Et l'analyse post-incident. Il est déclenché par une alarme {CloudWatch} ou une règle {EventBridge}.
+@slide quiz QUESTION
+Organiser l'astreinte, l'escalade et le runbook pendant un incident.
+> **Incident Manager**.
+@end
+L: Question. Organiser l'astreinte, l'escalade et le {runbook} pendant un incident.
 [pause 3]
-R: Incident Manager.
-L: Et OpsCenter ?
-R: Il centralise les OpsItems, les problèmes opérationnels, avec leur contexte, les ressources liées et les runbooks associés.
-L: DevOps Guru ?
-R: Détection d'anomalies opérationnelles par machine learning, sans définir de seuils. C'est la réponse à : détecter les anomalies sans configurer d'alarmes à la main. Et DevOps Guru for RDS pour les problèmes de performance de base de données.
-L: Dernière partie, la plus pratique : le dépannage, service par service. CodeDeploy.
-R: L'agent absent ou arrêté. Le profil d'instance sans accès à S3. Le service role de CodeDeploy manquant. L'appspec qui n'est pas à la racine. Application Stop qui échoue à cause du script de l'ancienne révision, on relance avec ignore application stop failures. Et l'erreur HEALTH CONSTRAINTS : trop d'instances en échec par rapport au minimum de la deployment config.
-L: CloudFormation. Une stack est bloquée en UPDATE ROLLBACK FAILED.
+@answer
+R: {Incident Manager}.
+@slide cards Outils de gestion d'incident
+Incident Manager :: Response plans, contacts, **escalade**, canal de chat, runbooks SSM Automation, post-incident
+OpsCenter :: Centralise les **OpsItems** avec contexte, ressources et runbooks
+DevOps Guru :: Anomalies opérationnelles par **ML**, **sans seuils** · DevOps Guru for RDS
+@end
+@+
+L: Et {OpsCenter} ?
+@+
+R: Il centralise les {OpsItems}, les problèmes opérationnels, avec leur contexte, les ressources liées et les {runbooks} associés.
+L: {DevOps Guru} ?
+@+
+R: Détection d'anomalies opérationnelles par {machine learning}, sans définir de seuils. C'est la réponse à : détecter les anomalies sans configurer d'alarmes à la main. Et {DevOps Guru for RDS} pour les problèmes de performance de base de données.
+@slide bullets Dépannage CodeDeploy
+Agent absent ou arrêté · instance profile sans accès S3 · service role manquant
+appspec.yml pas à la racine
+ApplicationStop échoue → script de l'**ancienne** révision → --ignore-application-stop-failures
+**HEALTH_CONSTRAINTS** : trop d'instances en échec vs minimum de la deployment config
+@end
+L: Dernière partie, la plus pratique : le dépannage, service par service. {CodeDeploy}.
+@all
+R: L'agent absent ou arrêté. Le profil d'instance sans accès à {S3}. Le {service role} de {CodeDeploy} manquant. L'{appspec} qui n'est pas à la racine. {Application Stop} qui échoue à cause du script de l'ancienne révision, on relance avec {ignore application stop failures}. Et l'erreur {HEALTH CONSTRAINTS} : trop d'instances en échec par rapport au minimum de la {deployment config}.
+@slide table Dépannage CloudFormation
+Symptôme | Solution
+**UPDATE_ROLLBACK_FAILED** | corriger, puis **ContinueUpdateRollback** (resources-to-skip)
+**DELETE_FAILED** | vider le bucket / retirer la dépendance, ou **RetainResources**
+Bloquée 1 h sur une custom resource | la Lambda n'a pas répondu SUCCESS / FAILED
+Timeout de la CreationPolicy | cfn-signal jamais envoyé (user data, réseau, nom)
+@end
+L: {CloudFormation}. Une {stack} est bloquée en {UPDATE ROLLBACK FAILED}.
 [pause 4]
-R: Souvent parce qu'une ressource a été modifiée à la main. On corrige, puis on lance Continue Update Rollback, avec resources to skip si besoin.
-L: Et DELETE FAILED ?
-R: Typiquement un bucket S3 qui n'est pas vide, ou une ressource utilisée ailleurs. On vide le bucket ou on retire la dépendance, ou on relance la suppression avec Retain Resources.
-L: Une stack qui reste bloquée une heure avec une custom resource ?
-R: La Lambda n'a jamais répondu sur l'URL pré-signée. Timeout d'une heure par défaut. Il faut toujours renvoyer SUCCESS ou FAILED, même en cas d'exception.
-L: Et un timeout de la Creation Policy ?
-R: Le cfn signal n'a jamais été envoyé. Soit le script user data a planté, soit l'instance n'a pas d'accès réseau à l'endpoint CloudFormation, soit le nom de la ressource dans cfn signal est faux. Et pour garder les ressources et débugger, on désactive le rollback.
-L: Auto Scaling. Des instances sont lancées puis terminées en boucle.
+@+
+R: Souvent parce qu'une ressource a été modifiée à la main. On corrige, puis on lance {Continue Update Rollback}, avec {resources to skip} si besoin.
+L: Et {DELETE FAILED} ?
+@+
+R: Typiquement un bucket {S3} qui n'est pas vide, ou une ressource utilisée ailleurs. On vide le bucket ou on retire la dépendance, ou on relance la suppression avec {Retain Resources}.
+L: Une {stack} qui reste bloquée une heure avec une {custom resource} ?
+@+
+R: La {Lambda} n'a jamais répondu sur l'{URL} pré-signée. {Timeout} d'une heure par défaut. Il faut toujours renvoyer {SUCCESS} ou {FAILED}, même en cas d'exception.
+L: Et un {timeout} de la {Creation Policy} ?
+@+
+R: Le {cfn signal} n'a jamais été envoyé. Soit le script {user data} a planté, soit l'instance n'a pas d'accès réseau à l'{endpoint} {CloudFormation}, soit le nom de la ressource dans {cfn signal} est faux. Et pour garder les ressources et débugger, on désactive le {rollback}.
+@slide bullets Dépannage Auto Scaling
+Lancées puis terminées en boucle → **grace period** trop courte, ou health check ELB qui échoue
+Instance en échec non remplacée → health check type **EC2** au lieu d'**ELB**
+Garder une instance pour l'analyser → lifecycle hook Terminating:Wait · **Standby** · suspendre **ReplaceUnhealthy**
+⚠ La scale-in protection ne protège pas d'un remplacement pour mauvaise santé
+@end
+L: {Auto Scaling}. Des instances sont lancées puis terminées en boucle.
 [pause 4]
-R: La health check grace period est trop courte, ou le health check ELB échoue : l'application n'est pas prête, mauvais port, mauvais chemin, ou security group.
+@+
+R: La {health check grace period} est trop courte, ou le {health check} {ELB} échoue : l'application n'est pas prête, mauvais port, mauvais chemin, ou {security group}.
+@+
 L: Et si on veut garder une instance défaillante pour l'analyser ?
-R: Trois options. Un lifecycle hook sur la terminaison. Mettre l'instance en Standby. Ou suspendre le processus Replace Unhealthy. Attention : la scale-in protection ne protège pas d'un remplacement pour mauvaise santé.
-L: ECS. La tâche ne démarre pas, erreur Cannot Pull Container Error.
+@+2
+R: Trois options. Un {lifecycle hook} sur la terminaison. Mettre l'instance en {Standby}. Ou suspendre le processus {Replace Unhealthy}. Attention : la {scale-in protection} ne protège pas d'un remplacement pour mauvaise santé.
+@slide cards ECS : deux rôles
+Task execution role :: Le rôle d'**ECS lui-même** au démarrage : pull ECR, logs CloudWatch, secrets → CannotPullContainerError
+Task role :: Les permissions de **ton application** : S3, DynamoDB…
+Réseau :: NAT, ou VPC endpoints ECR (api + dkr) + **gateway endpoint S3**
+Circuit breaker :: Déploiement qui échoue en boucle → **rollback automatique**
+@end
+L: {ECS}. La tâche ne démarre pas, erreur {Cannot Pull Container Error}.
 [pause 4]
-R: Le task execution role, ou le réseau. Le task execution role, c'est le rôle qu'utilise ECS lui-même pour tirer l'image depuis ECR, écrire les logs et lire les secrets au démarrage. Côté réseau, il faut une NAT ou des VPC endpoints pour ECR et S3.
-L: Et le task role ?
-R: Le task role, ce sont les permissions de ton application, par exemple pour appeler S3 ou DynamoDB. Execution role égal ECS, task role égal ton code. Et pour un déploiement ECS qui échoue en boucle : le deployment circuit breaker avec rollback automatique.
-L: Lambda ?
-R: Timeout, quinze minutes maximum. Throttling avec des erreurs quatre cent vingt-neuf, la concurrence est épuisée. Une Lambda dans un VPC sans NAT n'a pas accès à Internet ni aux API AWS publiques. Ou des permissions manquantes sur le rôle d'exécution.
-L: Et Elastic Beanstalk ?
-R: eb logs, ou demander les logs depuis la console. Et l'enhanced health pour voir les causes.
+@+
+R: Le {task execution role}, ou le réseau. Le {task execution role}, c'est le rôle qu'utilise {ECS} lui-même pour tirer l'image depuis {ECR}, écrire les logs et lire les secrets au démarrage.
+@+2
+R: Côté réseau, il faut une {NAT} ou des {VPC endpoints} pour {ECR} et {S3}.
+L: Et le {task role} ?
+@+
+R: Le {task role}, ce sont les permissions de ton application, par exemple pour appeler {S3} ou {DynamoDB}. {Execution role} égal {ECS}, {task role} égal ton code. Et pour un déploiement {ECS} qui échoue en boucle : le {deployment circuit breaker} avec {rollback} automatique.
+@slide bullets Dépannage Lambda et Elastic Beanstalk
+Lambda : **timeout** (max 15 min) · **throttling** 429 (concurrence épuisée)
+Lambda dans un VPC sans NAT → pas d'Internet ni d'API AWS publiques
+Permissions manquantes sur le rôle d'exécution
+Elastic Beanstalk : eb logs, logs depuis la console, **enhanced health**
+@end
+L: {Lambda} ?
+@+3
+R: {Timeout}, quinze minutes maximum. {Throttling} avec des erreurs quatre cent vingt-neuf, la concurrence est épuisée. Une {Lambda} dans un {VPC} sans {NAT} n'a pas accès à Internet ni aux {API} {AWS} publiques. Ou des permissions manquantes sur le rôle d'exécution.
+L: Et {Elastic Beanstalk} ?
+@+
+R: {eb logs}, ou demander les logs depuis la console. Et l'{enhanced health} pour voir les causes.
+@slide bullets À retenir
+**EventBridge** par défaut · polling et cron = faux
+Lambda async → **Destinations** · SQS → **DLQ sur la file** + ReportBatchItemFailures · Kinesis → **bisect**
+UPDATE_ROLLBACK_FAILED → **ContinueUpdateRollback** · CannotPullContainer → **task execution role**
+@end
 L: Résumé en trois phrases.
-R: Un : EventBridge est la réponse par défaut, le polling et le cron sont faux. Deux : Lambda asynchrone, ce sont les destinations ; SQS, c'est une DLQ sur la file avec Report Batch Item Failures ; Kinesis, c'est bisect. Trois : en dépannage, UPDATE ROLLBACK FAILED se règle avec Continue Update Rollback, et Cannot Pull Container, c'est le task execution role.
-L: Prochain épisode : Security et Compliance. À tout de suite.
+@+
+R: Un : {EventBridge} est la réponse par défaut, le {polling} et le {cron} sont faux.
+@+
+R: Deux : {Lambda} asynchrone, ce sont les destinations ; {SQS}, c'est une {DLQ} sur la file avec {Report Batch Item Failures} ; {Kinesis}, c'est {bisect}.
+@+
+R: Trois : en dépannage, {UPDATE ROLLBACK FAILED} se règle avec {Continue Update Rollback}, et {Cannot Pull Container}, c'est le {task execution role}.
+L: Prochain épisode : {Security} et {Compliance}. À tout de suite.

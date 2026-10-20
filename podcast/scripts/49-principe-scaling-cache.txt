@@ -1,0 +1,82 @@
+# Principe — Passer à l'échelle : scaling, cache, API Gateway, SLA, en schémas
+@slide title Passer à l'échelle
+Principe en schémas · Domaine 3
+La bonne métrique, le bon auto scaling, le bon cache, et le calcul d'un SLA
+@end
+L: Passer à l'échelle. Rémy, par où commencer ?
+R: Par la métrique. Un auto scaling qui regarde la mauvaise métrique réagit trop tard ou pas du tout. Ensuite, le cache, qui évite de solliciter le backend. Et enfin, comment on calcule la disponibilité d'une architecture.
+@slide diagram Quelle métrique pour quel service ?
+node asg 1 4 30 26 | Auto Scaling group | CPU, requêtes par cible ALB | 🖥️ | account
+node sqs 1 38 30 26 | Workers SQS | messages en attente par instance | 📬 | service
+node ecs 1 72 30 26 | Service ECS | CPU, mémoire, requêtes | 🐳 | proactive
+node tt 38 38 22 26 | Target tracking | le défaut conseillé | 🎯 | data
+node cap 66 72 33 26 | Capacity provider | ajoute les instances EC2 du cluster | 🧱 | proactive
+node ddb 66 4 33 26 | DynamoDB · RDS | auto scaling, on-demand, stockage auto | 🗄️ | ou
+node lam 66 38 33 26 | Lambda | concurrence réservée, provisionnée | λ | detect
+arrow m1 asg tt | | | account
+arrow m2 sqs tt | backlog / instance | | service
+arrow m3 ecs tt | | | proactive
+arrow m4 ecs cap | | dashed | proactive
+@end
+@show asg tt m1
+@flow m1
+L: Commençons par {EC2}.
+R: Un {Auto Scaling group} en {target tracking}, le défaut conseillé. Sur le {CPU}, ou mieux pour un site web, sur le nombre de requêtes par cible de l'{ALB}.
+@show sqs m2
+@focus sqs m2 tt
+@flow m2
+R: Pour des {workers} qui lisent une file {SQS}, ni le {CPU} ni la taille brute de la file : le nombre de messages en attente par instance. C'est une métrique {custom} sur laquelle on fait du {target tracking}.
+@show ecs m3 cap m4
+@focus ecs m3 m4 cap
+R: Pour {ECS} : l'auto scaling du service ajoute des tâches, et le {capacity provider}, avec le {managed scaling}, ajoute les instances {EC2} du cluster pour les héberger. Avec {Fargate}, pas d'instances à gérer.
+@show ddb lam
+@focus ddb lam
+R: {DynamoDB} : auto scaling de la capacité, ou mode {on-demand}. {RDS} : {storage auto scaling} pour le disque, et des réplicas {Aurora} en auto scaling pour la lecture. {Lambda} : la concurrence réservée et provisionnée.
+@unfocus
+@slide diagram Le cache, à chaque étage
+node users 1 38 15 24 | Utilisateurs | | 👥 | user
+node cf 20 38 16 24 | CloudFront | cache en edge | 🌍 | service
+node apigw 41 38 17 24 | API Gateway | cache par stage, throttling | 🚪 | proactive
+node app 63 38 15 24 | Backend | Lambda, ECS | ⚙️ | account
+node ec 82 4 17 24 | ElastiCache | Redis, Memcached | ⚡ | detect
+node dax 82 72 17 24 | DAX | cache DynamoDB | 🚀 | ou
+node db 82 38 17 24 | Base | RDS, DynamoDB | 🗄️ | data
+arrow k1 users cf | | | user
+arrow k2 cf apigw | | | service
+arrow k3 apigw app | | | proactive
+arrow k4 app ec | | dashed | detect
+arrow k5 app db | | | data
+arrow k6 app dax | | dashed | ou
+@end
+@show users cf k1
+@flow k1
+L: Et le cache ?
+R: À chaque étage. {CloudFront} garde le contenu au plus près des utilisateurs : statique, mais aussi des réponses d'{API}.
+@show apigw k2
+@focus apigw k2
+@flow k2
+R: {API Gateway} a son propre cache, par {stage}, avec une durée de vie. Et surtout le {throttling} : des limites de débit par compte, par méthode, et par client avec des {usage plans} et des clés d'{API}. Les {stages} permettent aussi une {canary release}.
+@show app db ec dax k3 k4 k5 k6
+@focus app k4 ec k6 dax
+@flow k3 k4 k6
+R: Côté données : {ElastiCache}, {Redis} ou {Memcached}, devant une base relationnelle. Et {DAX}, un cache en microsecondes dédié à {DynamoDB}, sans changer le code d'accès.
+@unfocus
+@slide cards SLA et points uniques de défaillance
+En série :: Les disponibilités se **multiplient** : 99,99 % × 99,95 % ≈ 99,94 %. Chaque maillon fait baisser le total
+En parallèle :: La redondance **augmente** la disponibilité : deux AZ indépendantes valent mieux qu'une
+Points uniques :: Une seule NAT gateway, une base mono-AZ, une seule instance, une IP codée en dur
+Remède :: Multi-AZ partout, une NAT gateway par AZ, Auto Scaling, Route 53 ou Global Accelerator
+@end
+@+2
+L: Et les {SLA} ?
+R: Quand des composants sont en série, leurs disponibilités se multiplient : chaque maillon fait baisser le total. Quand on les met en parallèle, dans deux zones indépendantes, la disponibilité augmente.
+@+2
+R: Les points uniques de défaillance à repérer : une seule {NAT gateway} pour plusieurs zones, une base mono-zone, une instance seule. Le remède : du {Multi-AZ} partout, une {NAT gateway} par zone, de l'{Auto Scaling}.
+@slide quiz QUESTION
+Des workers EC2 traitent une file SQS ; le traitement prend du retard aux heures de pointe. Sur quelle métrique faire l'auto scaling ?
+> Le **backlog par instance** (messages en attente ÷ instances), en **target tracking** sur une métrique custom.
+@end
+L: Question. Des {workers} {EC2} qui lisent une file {SQS} prennent du retard. Sur quelle métrique faire l'auto scaling ?
+[pause 4]
+@answer
+R: Le nombre de messages en attente par instance, en {target tracking}.
